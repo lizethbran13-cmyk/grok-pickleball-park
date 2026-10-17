@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#16a34a">
+<title>Grok Pickleball Park</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css?v=ppk1">
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.min.js", "three/addons/": "./lib/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" class="hidden">
+  <div id="hTL"><div id="hArea" class="chip">🎟️ Park Entrance</div><div id="hGoal"></div></div>
+  <div id="hTR"><div class="chip">🪙 <b id="hCoins">0</b></div><div class="chip">⭐ <b id="hRate">2.0</b></div></div>
+  <button id="hPause" aria-label="journal">📒</button>
+</div>
+<div id="touch" class="hidden">
+  <div id="touchZone"></div><div id="stickRing"></div><div id="stickKnob"></div>
+  <button class="tb" id="tJump" data-b="jump">JUMP</button>
+  <button class="tb" id="tView" data-b="view">👁️</button>
+  <button class="hidden" id="tAct" data-b="act"></button>
+</div>
+<div id="dlg"></div>
+<div id="ui"></div>
+<div id="toast"></div>
+<div id="loading"><div class="lg">GROK<br><span>PICKLEBALL PARK</span></div><div class="bar"><i id="loadBar"></i></div><p id="loadTxt">Loading…</p></div>
+<script src="js/pb/util.js?v=ppk1"></script>
+<script src="js/pb/data.js?v=ppk1"></script>
+<script src="js/pb/physics.js?v=ppk1"></script>
+<script src="js/pb/rules.js?v=ppk1"></script>
+<script src="js/pb/match.js?v=ppk1"></script>
+<script type="module" src="js/main.js?v=ppk1"></script>
+</body>
+</html>
