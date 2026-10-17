@@ -136,9 +136,9 @@ export class Game {
       if (p.root.visible && inView(p.x, p.y + 0.5, p.z, 1.5)) animPet(p, dt, focus); }
     this.stepAmbient(dt); this.drawCrowd(dt);
     this.lightPool.update(dt, focus.x, focus.y || 0, focus.z); followShadow(focus.x, focus.y || 0, focus.z); this.app.hud.update(this); }
-  drawCrowd(dt) { const me = this.me, list = [], RM = this.world.regionMeshes; const cheer = this.mv ? this.mv.cheerT > 0 : false;
+  drawCrowd(dt) { const me = this.mv ? this.mv.focus() : this.me, list = [], RM = this.world.regionMeshes; const cheer = this.mv ? this.mv.cheerT > 0 : false;
     for (const A of this.amb) for (const f of A.figs) list.push(f);
-    for (const a of this.walkers) { const t = a.path[a.wi]; const dx = t[0] - a.x, dz = t[1] - a.z, d = Math.hypot(dx, dz); if (d < 0.3) a.wi = (a.wi + 1) % a.path.length; else { const sp = 1.3; a.x += dx / d * sp * dt; a.z += dz / d * sp * dt; a.ry = Math.atan2(dx, dz); a.sp = sp; a.wt = (a.wt || 0) + dt * sp * 4.2; } a.vis = (!this.inB || this.fp) && Math.hypot(a.x - me.x, a.z - me.z) < 80; list.push(a); }
+    for (const a of this.walkers) { const t = a.path[a.wi]; const dx = t[0] - a.x, dz = t[1] - a.z, d = Math.hypot(dx, dz); if (d < 0.3) a.wi = (a.wi + 1) % a.path.length; else { const sp = 1.3; a.x += dx / d * sp * dt; a.z += dz / d * sp * dt; a.ry = Math.atan2(dx, dz); a.sp = sp; a.wt = (a.wt || 0) + dt * sp * 4.2; } a.vis = (!this.inB || this.fp || !!this.mv) && Math.hypot(a.x - me.x, a.z - me.z) < 80; list.push(a); }
     for (const a of this.people) { a.vis = a.region === 'out' ? Math.hypot(a.x - me.x, a.z - me.z) < 85 : !!(RM[a.region] && RM[a.region][0] && RM[a.region][0].visible); if (a.fan) { const near = this.mv && Math.hypot(a.x - this.mv.C.x, a.z - this.mv.C.z) < 26; a.cheer = cheer && near ? 1 : 0; a.sit = !a.cheer; a.y = a.cheer ? a.base + 0.42 : a.base; } list.push(a); }
     for (const a of list) if (a.vis && !inView(a.x, 1, a.z, 1.4)) a.vis = false;
     { let n = 0; const f = this.mv ? this.mv.focus() : me; for (const a of list) if (a.vis) n++; if (n > 230) { const far = list.filter((a) => a.vis && !a.ambP).sort((a, b) => Math.hypot(b.x - f.x, b.z - f.z) - Math.hypot(a.x - f.x, a.z - f.z)); for (let i = 0; i < n - 230 && i < far.length; i++) far[i].vis = false; } }
