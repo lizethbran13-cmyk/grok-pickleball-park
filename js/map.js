@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as K from './kit.js?v=ppk2';
 import { rbox } from './world.js?v=ppk2';
 import { shell, part, onSide } from './bld.js?v=ppk2';
+import { buildDillers } from './dillers.js?v=ppk2';
 import { txt, poster, frameArt, wallWord, clockW, pendant, planter, awning, trash } from './art.js?v=ppk2';
 import { court, PAL, CW, fence, fencedBox, bleachers, lightTower, umpireChair, scoreFrame, paddleProp, hopper, ballBucket } from './court.js?v=ppk2';
 import { COURTS } from './data.js?v=ppk2';
@@ -59,7 +60,7 @@ export function buildMap(w) {
   { const N = 120, Sz = 420; const g = new THREE.PlaneGeometry(Sz, Sz, N, N); g.rotateX(-PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i) - 30, r = Math.max(Math.abs(x) * 0.95, Math.abs(z) * 0.9); const hill = r > 118 ? Math.pow((r - 118) / 70, 1.6) * 22 * (0.7 + 0.3 * Math.sin(x * 0.05) * Math.cos(z * 0.04)) : 0; p.setY(i, hill - 0.02); p.setZ(i, p.getZ(i) + 30); } g.computeVertexNormals();
     w.addFn('m', g, (c, x, y, z) => { const n = Math.sin(x * 0.19) * Math.cos(z * 0.15) * 0.5 + Math.sin(x * 0.04 + z * 0.06) * 0.5; c.setHSL(0.27 + n * 0.025, 0.52, 0.42 + n * 0.05 + Math.min(0.08, y * 0.004)); }, 0, 0, 0); w.solid(-210, -3, -180, 210, 0, 240, { floor: true }); }
   paths(w); plaza(w); entrance(w); stadium(w); complexes(w); nightCourt(w); quietCourt(w); northLawn(w);
-  clubhouse(w); proShop(w); snackBar(w); training(w); shopFill(w); clubFill(w); snackFill(w); trainFill(w); nature(w);
+  clubhouse(w); proShop(w); snackBar(w); training(w); shopFill(w); clubFill(w); snackFill(w); trainFill(w); buildDillers(w, { SPOTS, SEATS, SITS, STANDS, RES }); nature(w);
   w.region = 'out';
 }
 function paths(w) { const T = (x0, z0, x1, z1, c1 = 0xe8dcc4, c2 = 0xdccfb4) => K.floor(w, x0, z0, x1, z1, 'tile', 0.02, c1, c2, 1.5);

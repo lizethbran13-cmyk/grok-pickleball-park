@@ -5,8 +5,9 @@ import { sfx, setSound } from './audio.js?v=ppk2';
 import { panel, closePanel, on, toast } from './uikit.js?v=ppk2';
 import { SKINS, HAIRS, HAIR_COLS, SHIRTS, PANTS, cleanLook } from './humans.js?v=ppk2';
 import { goal } from './story.js?v=ppk2';
-import { PADDLES, BALLS, HATS, SHOES, RANKS, rankOf, LADDER, NAMES, TOURNEYS, DRILLS, COURTS, PARTNERS } from './data.js?v=ppk2';
+import { PADDLES, BALLS, HATS, SHOES, RANKS, rankOf, LADDER, NAMES, TOURNEYS, DILLERS_ROUNDS, DRILLS, COURTS, PARTNERS } from './data.js?v=ppk2';
 import { SPOTS } from './map.js?v=ppk2';
+import { dillersOwned } from './dlc.js?v=ppk2';
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const R = () => Math.random(), pick = (a) => a[(R() * a.length) | 0];
 const rndLook = () => ({ skin: (R() * 6) | 0, hair: (R() * 6) | 0, hairC: (R() * 6) | 0, shirt: (R() * 8) | 0, pants: (R() * 6) | 0 });
@@ -20,7 +21,7 @@ export class UI {
   // ---------------- title / look / options / how ----------------
   title() { const app = this.app; const ui = $('ui'); ui.classList.add('open'); app.preview = false; ui.innerHTML = `<div class="title">
       <div class="logo"><span class="l0">GROK</span><span class="l1">PICKLEBALL</span><span class="l2">PARK</span></div>
-      <p class="tag">A giant sports park full of courts, players and pets. Real pickleball rules, a Pro Shop with the MaxGrit paddle, drills with Luna, the Park Ladder, tournaments... and the Night Lights Court.</p>
+      <p class="tag">A giant sports park full of courts, players and pets. Real pickleball rules, a Pro Shop with the MaxGrit paddle, drills with Luna, the Park Ladder, tournaments${dillersOwned() ? ', Drive Dillers Indoor Center with Director Snowie, Lola & Candy' : ''}... and the Night Lights Court.</p>
       <div class="tBtns"><button class="go" id="tPlay">▶ ${S.made ? 'BACK TO THE PARK' : 'ENTER THE PARK'}</button><button class="mbtn2" id="tLook">👤 YOUR LOOK</button><button class="mbtn2" id="tOpts">⚙️ OPTIONS</button></div>
       <p class="foot">A Grok game · Torty, Luna, Pi-rat, Snowie & Candy</p></div>`;
     on(ui, '#tPlay', () => { if (!S.made) return this.custom(() => app.play(), true); app.play(); }); on(ui, '#tLook', () => this.custom(() => this.title())); on(ui, '#tOpts', () => this.options(() => this.title())); }
@@ -45,7 +46,7 @@ export class UI {
   how(done) { panel(`<h2>🏓 WELCOME TO THE PARK!</h2><div class="how"><p>🕹️ Left thumb: walk. Drag anywhere else to look. 👁️ switches first / third person.</p><p>🏟️ Walk onto any court's yellow spot and tap the button to play.</p>
       <p>📏 <b>Real rules:</b> serve underhand and diagonal. The serve must bounce, and the return must bounce (two-bounce rule). No volleys in the 7-foot kitchen. Only the serving side scores, to 11, win by 2.</p>
       <p>👉 In a match: tap = hit, swipe up = soft/drive (longer = harder), swipe way up = lob, swipe down = smash. Sideways aims. Or tap the shot buttons. 🌀 adds MaxGrit spin.</p>
-      <p>🛒 Torty's Pro Shop, 🏛️ Clubhouse (ladder + tournaments), 🎯 Training Center, 🌭 Snack Shack, 🌙 Night Lights Court and 🤫 the Quiet Court are all walk-in.</p></div><button class="go" id="hOk">LET'S PLAY!</button>`, (c) => on(c, '#hOk', () => { S.seenHow = true; persist(); done(); })); }
+      <p>🛒 Torty's Pro Shop, 🏛️ Clubhouse (ladder + tournaments), 🎯 Training Center, 🌭 Snack Shack, 🌙 Night Lights Court, 🤫 the Quiet Court${dillersOwned() ? ' and 🏟️ Drive Dillers Indoor Center (Indoor & Silent Serve balls only!)' : ''} are all walk-in.</p></div><button class="go" id="hOk">LET'S PLAY!</button>`, (c) => on(c, '#hOk', () => { S.seenHow = true; persist(); done(); })); }
   // ---------------- journal / pause ----------------
   pause(inMatch) { const app = this.app; app.busy = true; app.paused = true; const mv = this.g.mv;
     if (mv) { panel(`<h2>⏸ ${mv.drill ? 'DRILL' : 'MATCH'} PAUSED</h2><p class="sub">${esc(COURTS[mv.cid].n)}</p>
@@ -57,25 +58,27 @@ export class UI {
         on(c, '#pV', () => { mv.toggleFP(); app.resume(); }); on(c, '#pO', () => this.options(() => this.pause(true)));
         on(c, '#pQ', () => { if (S.tourRun && mv.cfg.mode === 'tourney') { S.tourRun = null; persist(); toast('🏳️ You withdrew from the tournament'); } this.g.endMatch(); app.resume(); }); }); return; }
     panel(`<h2>📒 PARK JOURNAL</h2><p class="sub">⭐ ${esc(goal())}</p>${this.cardHtml()}
-      <div class="btnRow"><button class="go" id="pR">▶ RESUME</button></div><div class="btnRow"><button class="mbtn2 sm" id="pM">🗺️ Map</button><button class="mbtn2 sm" id="pD">🎯 Drills</button><button class="mbtn2 sm" id="pB">🎒 Bag</button></div>
+      <div class="btnRow"><button class="go" id="pR">▶ RESUME</button></div><div class="btnRow"><button class="mbtn2 sm" id="pM">🗺️ Map</button><button class="mbtn2 sm" id="pD">🎯 Drills</button><button class="mbtn2 sm" id="pB">🎒 Bag</button>${dillersOwned() ? '<button class="mbtn2 sm" id="pDD">🏟️ Drive Dillers</button>' : ''}</div>
       <div class="btnRow"><button class="mbtn2 sm" id="pL">👤 Look</button><button class="mbtn2 sm" id="pO">⚙️ Options</button><button class="mbtn2 sm" id="pH">❓ Rules</button><button class="mbtn2 sm" id="pT">🏠 Title</button></div>`, (c) => {
-      on(c, '#pR', () => app.resume()); on(c, '#pM', () => this.map()); on(c, '#pD', () => this.drills('train', true)); on(c, '#pB', () => this.bag()); on(c, '#pL', () => this.custom(() => this.pause())); on(c, '#pO', () => this.options(() => this.pause())); on(c, '#pH', () => this.how(() => this.pause())); on(c, '#pT', () => app.toTitle()); }); }
-  cardHtml() { const st = S.stats, rk = rankOf(S.rating), pd = PADDLES.find((p) => p.id === S.eq.paddle);
+      on(c, '#pR', () => app.resume()); on(c, '#pM', () => this.map()); on(c, '#pD', () => this.drills('train', true)); on(c, '#pB', () => this.bag()); on(c, '#pDD', () => this.dillersTourney()); on(c, '#pL', () => this.custom(() => this.pause())); on(c, '#pO', () => this.options(() => this.pause())); on(c, '#pH', () => this.how(() => this.pause())); on(c, '#pT', () => app.toTitle()); }); }
+  cardHtml() { const st = S.stats, rk = rankOf(S.rating), pd = PADDLES.find((p) => p.id === S.eq.paddle) || PADDLES[0], bl = BALLS.find((b) => b.id === S.eq.ball) || BALLS[0];
+    const badges = [['candy', '🐶 Met Candy'], ['firstwin', '🏓 First Win'], ['ladder', '🪜 Ladder Climber'], ['king', '👑 Beat the King'], ['drill', '🎯 Drill Star'], ['spin', '🌀 Spin Doctor'], ['dillchamp', '🏟️ Drive Dillers Champ']];
     return `<div class="pcard"><div class="pcTop"><b>${esc(S.name || 'Player')}</b><span>${rk.n}</span></div><div class="statGrid"><div><b>${S.rating.toFixed(1)}</b><small>⭐ Rating</small></div><div><b>${S.coins}</b><small>🪙 Coins</small></div><div><b>${S.ladder >= 1 ? '#' + (S.ladder + 1 > 10 ? '—' : S.ladder + 1) : '👑 #1'}</b><small>🪜 Ladder</small></div><div><b>${st.wins}-${st.losses}</b><small>🏓 Record</small></div></div>
-      <p class="sub">🏓 ${esc(pd.n)} · 🎾 ${esc(BALLS.find((b) => b.id === S.eq.ball).n)} · 🏆 ${TOURNEYS.filter((t) => S.tour[t.id]).map((t) => t.icon).join(' ') || 'no trophies yet'}</p>
-      <p class="sub">${[['candy', '🐶 Met Candy'], ['firstwin', '🏓 First Win'], ['ladder', '🪜 Ladder Climber'], ['king', '👑 Beat the King'], ['drill', '🎯 Drill Star'], ['spin', '🌀 Spin Doctor']].map(([k, n]) => `<span class="badge ${S.badges[k] ? 'on' : ''}">${n}</span>`).join(' ')}</p></div>`; }
+      <p class="sub">🏓 ${esc(pd.n)} · 🎾 ${esc(bl.n)} · 🏆 ${TOURNEYS.filter((t) => S.tour[t.id]).map((t) => t.icon).join(' ') || (S.dillers && S.dillers.wins ? '🏟️' : 'no trophies yet')}</p>
+      <p class="sub">${badges.map(([k, n]) => `<span class="badge ${S.badges[k] ? 'on' : ''}">${n}</span>`).join(' ')}</p></div>`; }
   card() { this.open(); panel(`<h2>📇 MY PLAYER CARD</h2>${this.cardHtml()}<p class="sub">Ranks: ${RANKS.map((r) => r.r.toFixed(1) + ' ' + r.n).join(' · ')}</p><button class="go" id="b">CLOSE</button>`, (c) => on(c, '#b', () => this.back())); }
   bag() { this.open(); const row = (cat, list) => list.filter((x) => S.own[cat].includes(x.id)).map((x) => `<button class="hat ${S.eq[cat] === x.id ? 'on' : ''}" data-c="${cat}" data-i="${x.id}">${esc(x.n)}</button>`).join('');
     panel(`<h2>🎒 MY BAG</h2><h3>PADDLE</h3><div class="hats">${row('paddle', PADDLES)}</div><h3>BALL</h3><div class="hats">${row('ball', BALLS)}</div><h3>HAT</h3><div class="hats">${row('hat', HATS)}</div><h3>SHOES</h3><div class="hats">${row('shoe', SHOES)}</div><button class="go" id="b">DONE</button>`, (c) => {
       c.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => { sfx('click'); S.eq[b.dataset.c] = b.dataset.i; persist(); this.g.refreshMe(); this.bag(); }); on(c, '#b', () => this.back()); }); }
   map() { this.open(); const P = [['🎟️ Park Entrance', 0, 108, Math.PI], ['⛲ Fountain Plaza', 0, 72, Math.PI], ['🏟️ Stadium Court', 0, 9, Math.PI], ['🏓 West Courts', -54, 16, Math.PI], ['🏓 East Courts', 54, 16, Math.PI], ['🏛️ Clubhouse', -14, 57, -Math.PI / 2], ['🛒 Torty\'s Pro Shop', 14, 57, Math.PI / 2], ['🌭 Snack Shack', -24, 99, Math.PI], ['🎯 Training Center', 12, 94, Math.PI / 2], ['🌙 Night Lights Court', 54, -34, Math.PI], ['🤫 Quiet Court', -54, -34, Math.PI], ['🐶 Candy\'s Dog Run', 0, -60, Math.PI]];
+    if (dillersOwned()) P.splice(3, 0, ['🏟️ Drive Dillers Indoor', 48, 38, Math.PI / 2]);
     panel(`<h2>🗺️ PARK MAP</h2><p class="sub">Tap to fast-travel.</p><div class="hats">${P.map((p, i) => `<button class="hat" data-i="${i}">${p[0]}</button>`).join('')}</div><button class="mbtn2" id="b">CLOSE</button>`, (c) => {
       c.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sfx('whoosh'); const p = P[+b.dataset.i]; this.g.tp(p[1], p[2], p[3]); this.back(); }); on(c, '#b', () => this.back()); }); }
   // ---------------- Torty's Pro Shop ----------------
   shop(cat = 'paddle', focus) { this.open(); const lists = { paddle: PADDLES, ball: BALLS, gear: [...HATS.filter((h) => h.id !== 'none').map((h) => Object.assign({ cat: 'hat' }, h)), ...SHOES.filter((s) => s.id !== 'court').map((s) => Object.assign({ cat: 'shoe' }, s))] };
     const item = (x) => { const c = x.cat || cat, own = S.own[c].includes(x.id), eq = S.eq[c] === x.id;
       const vis = cat === 'paddle' ? `<span class="pdl" style="--a:${hex(x.a)};--b:${hex(x.b)}">${x.face === 'grit' ? '<em></em>' : ''}</span>` : cat === 'ball' ? `<span class="bal" style="--a:${hex(x.col)}">${x.quiet ? '' : '<em></em>'}</span>` : `<span class="ic">${c === 'hat' ? '🧢' : '👟'}</span>`;
-      const stats = cat === 'paddle' ? `<div class="stats"><small>POWER</small>${bar(x.pow, '#f97316')}<small>CONTROL</small>${bar(x.ctl, '#38bdf8')}<small>SPIN</small>${bar(x.spin, '#a855f7')}</div>` : cat === 'ball' ? `<div class="stats"><small>SPEED</small>${bar(1 - (x.drag - 0.04) * 10, '#f97316')}<small>BOUNCE</small>${bar((x.bounce - 0.5) * 3.5, '#38bdf8')}<small>${x.quiet ? '🤫 QUIET' : x.legal ? '✅ TOURNEY LEGAL' : ''}</small></div>` : '';
+      const stats = cat === 'paddle' ? `<div class="stats"><small>POWER</small>${bar(x.pow, '#f97316')}<small>CONTROL</small>${bar(x.ctl, '#38bdf8')}<small>SPIN</small>${bar(x.spin, '#a855f7')}</div>` : cat === 'ball' ? `<div class="stats"><small>SPEED</small>${bar(1 - (x.drag - 0.04) * 10, '#f97316')}<small>BOUNCE</small>${bar((x.bounce - 0.5) * 3.5, '#38bdf8')}<small>${x.quiet ? '🤫 SILENT FOAM (INDOOR OK)' : x.indoor ? '🏟️ INDOOR 26-HOLE' : x.legal ? '☀️ OUTDOOR ONLY' : ''}</small></div>` : '';
       return `<div class="shopIt ${focus === x.id ? 'focus' : ''} ${x.star ? 'star' : ''}">${vis}<div class="si"><b>${esc(x.n)}</b>${x.by ? `<small>${esc(x.by)}</small>` : ''}<p>${esc(x.d || '')}</p>${stats}</div>
         <button class="buy ${eq ? 'eq' : own ? 'own' : ''}" data-id="${x.id}" data-c="${c}">${eq ? '✔ USING' : own ? 'USE' : '🪙 ' + x.price}</button></div>`; };
     panel(`<h2>🛒 TORTY'S PRO SHOP</h2><p class="sub">🐢 "Slow and steady wins the rally!" · You have <b>🪙 ${S.coins}</b></p>
@@ -90,22 +93,170 @@ export class UI {
   snacks() { this.open(); const M = [['🥒', 'Pickle Juice', 4, 'Electrolytes! +10% reach next match'], ['🌭', 'Dill Dog', 8, 'A hot dog with a pickle spear. +10% reach next match'], ['🧀', 'Kitchen Nachos', 10, 'Named after the non-volley zone. +10% reach next match'], ['🍧', 'Snowie Cone', 6, 'Snowie\'s favorite. Blue raspberry. +10% reach next match']];
     panel(`<h2>🌭 DILL-ICIOUS SNACK SHACK</h2><p class="sub">🐁 Snowie: "Order up!" · 🪙 ${S.coins}</p><div class="shopList">${M.map((m, i) => `<div class="shopIt"><span class="ic big">${m[0]}</span><div class="si"><b>${m[1]}</b><p>${m[3]}</p></div><button class="buy" data-i="${i}">🪙 ${m[2]}</button></div>`).join('')}</div><button class="go" id="b">BACK</button>`, (c) => {
       c.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { const m = M[+b.dataset.i]; if (S.coins < m[2]) { sfx('deny'); toast('🪙 Not enough coins'); return; } S.coins -= m[2]; S.snacks = (S.snacks || 0) + 1; S.buff = 'pop'; persist(); sfx('buy'); toast(m[0] + ' Yum! You feel speedy.'); this.snacks(); }); on(c, '#b', () => this.back()); }); }
+  // ---------------- Drive Dillers Indoor Ball Bar, Smoothies, Kick-Out & Indoor Tournament ----------------
+  ensureDillersStarterBalls() {
+    if (!S.own.ball.includes('indoor')) S.own.ball.push('indoor');
+    if (!S.own.ball.includes('silent')) S.own.ball.push('silent');
+    persist();
+  }
+  dillersBallBar() {
+    this.open(); this.ensureDillersStarterBalls();
+    const cur = BALLS.find((b) => b.id === S.eq.ball) || BALLS[0];
+    const items = BALLS.filter((b) => ['silent', 'indoor', 'dillball', 'outdoor'].includes(b.id));
+    panel(`<h2>🟠 DRIVE DILLERS INDOOR BALL BAR</h2>
+      <p class="sub">👩‍⚖️🐶 <b>Courts Manager Lola & Candy Rule:</b> Inside Drive Dillers, you can ONLY play with <b>Indoor 26-Hole balls</b> or the <b>Silent Serve Foam ball</b>! Starter indoor & foam balls are free right here.</p>
+      <div class="shopList">${items.map((x) => {
+        const own = S.own.ball.includes(x.id), eq = S.eq.ball === x.id;
+        const badge = x.id === 'silent' ? '🧽 SILENT SERVE FOAM · ✅ APPROVED' : x.indoor ? '🏟️ 26-HOLE INDOOR · ✅ APPROVED' : '⚠️ 40-HOLE OUTDOOR · 🐶 CANDY WILL STEAL!';
+        return `<div class="shopIt ${eq ? 'focus' : ''}"><span class="bal" style="--a:${hex(x.col)}">${x.quiet ? '' : '<em></em>'}</span>
+          <div class="si"><b>${esc(x.n)}</b><small>${badge}</small><p>${esc(x.d)}</p></div>
+          <button class="buy ${eq ? 'eq' : own ? 'own' : ''}" data-b="${x.id}">${eq ? '✔ EQUIPPED' : own ? 'EQUIP' : '🪙 ' + x.price}</button></div>`;
+      }).join('')}</div>
+      <div class="btnRow"><button class="go" id="t">🏟️ INDOOR TOURNAMENT</button><button class="mbtn2" id="b">DONE</button></div>`, (c) => {
+      c.querySelectorAll('[data-b]').forEach((b) => b.onclick = () => {
+        const id = b.dataset.b, x = BALLS.find((q) => q.id === id);
+        if (!S.own.ball.includes(id)) {
+          if (S.coins < x.price) { sfx('deny'); toast('🪙 Need ' + (x.price - S.coins) + ' more coins!'); return; }
+          S.coins -= x.price; S.own.ball.push(id); sfx('buy');
+        } else sfx('click');
+        S.eq.ball = id; if (S.dillers) S.dillers.ball = id; persist();
+        toast(x.indoor ? '✅ Equipped ' + x.n + ' — Lola & Candy approve!' : '⚠️ Equipped ' + x.n + ' — Watch out for Candy & Lola inside Drive Dillers!');
+        this.dillersBallBar();
+      });
+      on(c, '#t', () => this.dillersTourney()); on(c, '#b', () => this.back());
+    });
+  }
+  dillersSmoothies() {
+    this.open();
+    const M = [
+      ['🥤', 'Dill-ight Lime Electrolyte', 5, 'Fresh lime + sea salt + dill sprig! +10% reach next match'],
+      ['🍵', 'Silent Serve Foam Matcha', 7, 'Whipped green foam cold brew! +10% reach next match'],
+      ['🏆', 'Golden Dill Protein Shake', 9, 'Director Snowie\'s championship blend! +10% reach next match'],
+    ];
+    panel(`<h2>🥤 DILL-IGHT SMOOTHIE BAR</h2><p class="sub">🏟️ Drive Dillers Courtside Refuel · 🪙 ${S.coins}</p>
+      <div class="shopList">${M.map((m, i) => `<div class="shopIt"><span class="ic big">${m[0]}</span><div class="si"><b>${m[1]}</b><p>${m[3]}</p></div><button class="buy" data-i="${i}">🪙 ${m[2]}</button></div>`).join('')}</div>
+      <button class="go" id="b">BACK</button>`, (c) => {
+      c.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { const m = M[+b.dataset.i]; if (S.coins < m[2]) { sfx('deny'); toast('🪙 Not enough coins'); return; } S.coins -= m[2]; S.snacks = (S.snacks || 0) + 1; S.buff = 'pop'; persist(); sfx('buy'); toast(m[0] + ' Refueled for Drive Dillers!'); this.dillersSmoothies(); });
+      on(c, '#b', () => this.back());
+    });
+  }
+  lolaKickOut(ballDef, cfg) {
+    this.open(); this.ensureDillersStarterBalls();
+    panel(`<h2>🐶💢 BUSTED BY CANDY & LOLA!</h2>
+      <div class="pcard" style="border:2px solid #ef4444;background:rgba(127,29,29,0.35)">
+        <div class="pcTop"><b>🐶 Candy (Indoor Ball Inspector)</b><span style="color:#facc15">WOOF! WOOF! GRRR!</span></div>
+        <p class="sub" style="color:#fef08a;margin:6px 0">Candy bolted onto <b>${esc(COURTS[cfg.court].n)}</b>, barked her head off, and <b>stole your ${esc(ballDef.n)}</b> right out of the air!</p>
+        <div class="pcTop" style="margin-top:8px"><b>👩‍⚖️ Courts Manager Lola</b><span style="color:#fca5a5">WHISTLE!! 📢</span></div>
+        <p class="sub" style="color:#fff;margin:6px 0">"HEY!! <b>Indoor pickleball balls or Silent Serve foam balls ONLY</b> in Drive Dillers! No ${esc(ballDef.n)} allowed on my hardwood! <b>OUT YOU GO!</b>"</p>
+      </div>
+      <p class="sub">🚪 Lola and Candy escorted you outside the Drive Dillers front entrance! Equip an approved <b>Silent Serve Foam Ball</b> or <b>26-Hole Indoor Ball</b> below to head back inside and play:</p>
+      <div class="btnRow">
+        <button class="go" id="eqSilent">🧽 Equip Silent Serve Foam & Re-Enter</button>
+        <button class="go" id="eqIndoor">🟠 Equip 26-Hole Indoor & Re-Enter</button>
+      </div>
+      <div class="btnRow"><button class="mbtn2" id="stayOut">🚶 Stay Outside (Look at Lola & Candy)</button></div>`, (c) => {
+      const reenter = (bId) => {
+        this.g.equipIndoorBall(bId);
+        this.g.restoreLolaAndCandyInside();
+        const spot = SPOTS['court_' + cfg.court] || SPOTS.dillersDesk;
+        this.g.tp(spot[0], spot[1], Math.PI);
+        if (cfg.mode === 'dillers') this.dillersTourney();
+        else this.matchSetup(cfg.court);
+      };
+      on(c, '#eqSilent', () => reenter('silent'));
+      on(c, '#eqIndoor', () => reenter('indoor'));
+      on(c, '#stayOut', () => this.back());
+    });
+  }
+  dillersTourney() {
+    this.open(); this.ensureDillersStarterBalls();
+    if (!S.dillers) S.dillers = { wins: 0, run: null, ball: 'indoor', doubles: false };
+    const run = S.dillers.run || { round: 0 };
+    const curRound = Math.min(2, run.round || 0);
+    const rd = DILLERS_ROUNDS[curRound];
+    const eqBall = BALLS.find((b) => b.id === S.eq.ball) || BALLS[0];
+    const bChoices = BALLS.filter((b) => S.own.ball.includes(b.id) || ['silent', 'indoor', 'outdoor'].includes(b.id));
+    panel(`<h2>🏟️ DRIVE DILLERS INDOOR TOURNAMENT</h2>
+      <p class="sub">🐁 <b>Director Snowie:</b> "Travel across all 3 indoor courts — each match gets harder! Win Round 3 on Center Stage for the <b>Golden Dill Cup (🪙 260)</b>!" · Titles won: <b>🏆 ${S.dillers.wins || 0}</b></p>
+      <div class="ladder">${DILLERS_ROUNDS.map((r, i) => {
+        const C = COURTS[r.court], done = i < curRound, cur = i === curRound;
+        return `<div class="lr ${done ? 'beat' : cur ? 'next' : ''}">
+          <span class="rk">${["🥉","🥈","👑"][i] || "🏟️"} R${i + 1}</span>
+          <b>${esc(C.n)} — vs ${esc(S.dillers.doubles ? r.opp.n + ' & ' + r.opp2.n : r.opp.n)}</b>
+          <small>${r.diff.toUpperCase()} · to ${r.to} · ${done ? 'WON ✔' : cur ? 'UP NEXT' : 'LOCKED'}</small>
+        </div>`;
+      }).join('')}</div>
+      <h3>FORMAT</h3>
+      <div class="seg">
+        <button data-df="0" class="${!S.dillers.doubles ? 'on' : ''}">🧍 Singles (1v1)</button>
+        <button data-df="1" class="${S.dillers.doubles ? 'on' : ''}">👥 Doubles (2v2 w/ ${esc((PARTNERS.find((p) => p.id === S.partner) || PARTNERS[0]).n)})</button>
+      </div>
+      <h3>BALL (👩‍⚖️🐶 LOLA & CANDY CHECK: INDOOR OR SILENT SERVE ONLY!)</h3>
+      <div class="hats">${bChoices.map((b) => `<button class="hat ${S.eq.ball === b.id ? 'on' : ''}" data-db="${b.id}">${b.id === 'silent' ? '🧽 ' : b.indoor ? '🟠 ' : '⚠️ '}${esc(b.n)}</button>`).join('')}</div>
+      <p class="sub">${eqBall.indoor ? `✅ <b>${esc(eqBall.n)}</b> is approved for Drive Dillers indoor play!` : `⚠️ <b>${esc(eqBall.n)}</b> is an OUTDOOR ball — if you press Play, <b>Candy will bark & steal it and Lola will kick you out!</b>`}</p>
+      <div class="btnRow">
+        <button class="go" id="goDill">▶ PLAY ROUND ${curRound + 1} (${esc(COURTS[rd.court].n)})</button>
+        <button class="mbtn2" id="ballBar">🟠 Ball Bar</button>
+        <button class="mbtn2" id="b">BACK</button>
+      </div>
+      ${curRound > 0 ? '<button class="mbtn2 sm danger" id="rstDill">↺ Restart Tournament Bracket</button>' : ''}`, (c) => {
+      c.querySelectorAll('[data-df]').forEach((b) => b.onclick = () => { sfx('click'); S.dillers.doubles = b.dataset.df === '1'; persist(); this.dillersTourney(); });
+      c.querySelectorAll('[data-db]').forEach((b) => b.onclick = () => { sfx('click'); const id = b.dataset.db; if (!S.own.ball.includes(id)) S.own.ball.push(id); S.eq.ball = id; S.dillers.ball = id; persist(); this.dillersTourney(); });
+      on(c, '#ballBar', () => this.dillersBallBar());
+      on(c, '#rstDill', () => { S.dillers.run = null; persist(); toast('↺ Drive Dillers bracket reset to Round 1'); this.dillersTourney(); });
+      on(c, '#goDill', () => this.startDillersRound(curRound));
+      on(c, '#b', () => this.back());
+    });
+  }
+  startDillersRound(roundIdx) {
+    const rd = DILLERS_ROUNDS[roundIdx] || DILLERS_ROUNDS[0];
+    if (!S.dillers.run) { S.dillers.run = { round: roundIdx }; persist(); }
+    const dbl = !!S.dillers.doubles;
+    const opps = (dbl ? [rd.opp, rd.opp2] : [rd.opp]).map((o, i) => Object.assign({ look: rndLook(), hat: i === 0 ? 'visor' : 'headband', style: {} }, o));
+    let partner = null;
+    if (dbl) {
+      let pid = S.partner || 'kai';
+      if (opps.some((o) => o.pet === pid)) pid = 'kai';
+      partner = this.partnerDef(pid);
+    }
+    this.start({
+      court: rd.court,
+      mode: 'dillers',
+      dillersRound: roundIdx,
+      doubles: dbl,
+      partner,
+      opps,
+      to: rd.to,
+      diff: rd.diff,
+      diffK: DIFFS.findIndex((d) => d[0] === rd.diff),
+      ball: S.eq.ball,
+      title: '🏟️ ' + (rd.stage || rd.n) + ' (' + COURTS[rd.court].n + ')',
+      ump: rd.court === 'dill3',
+    });
+  }
   // ---------------- quick match on any court ----------------
   oppDef(diff, k = 0) { return { n: NAMES[(Math.random() * NAMES.length + k) % NAMES.length | 0], diff, look: rndLook(), hat: pick(['none', 'visor', 'cap', 'headband']), style: {} }; }
   partnerDef(id) { const p = PARTNERS.find((q) => q.id === id) || PARTNERS[0]; return Object.assign({}, p); }
-  matchSetup(court) { this.open(); const C = COURTS[court], s = this.setup; const quiet = C.kind === 'quiet';
-    panel(`<h2>🏓 ${esc(C.n)}</h2><p class="sub">${quiet ? '🤫 Silent Serve foam balls only on this court. Shh!' : C.kind === 'night' ? '🌙 Under the light towers' : C.kind === 'stadium' ? '🏟️ The big one. Pi-rat is the umpire.' : 'Open play: grab a game!'}</p>
+  matchSetup(court) { this.open(); const C = COURTS[court], s = this.setup; const quiet = C.kind === 'quiet', inDillers = C.bld === 'dillers';
+    if (inDillers) this.ensureDillersStarterBalls();
+    const eqBall = BALLS.find((b) => b.id === S.eq.ball) || BALLS[0];
+    const bChoices = inDillers ? BALLS.filter((b) => S.own.ball.includes(b.id) || ['silent', 'indoor', 'outdoor'].includes(b.id)) : [];
+    panel(`<h2>🏓 ${esc(C.n)}</h2><p class="sub">${quiet ? '🤫 Silent Serve foam balls only on this court. Shh!' : inDillers ? '🏟️ Drive Dillers Indoor Court · 👩‍⚖️🐶 Lola & Candy Rule: Indoor 26-Hole or Silent Serve Foam balls ONLY!' : C.kind === 'night' ? '🌙 Under the light towers' : C.kind === 'stadium' ? '🏟️ The big one. Pi-rat is the umpire.' : 'Open play: grab a game!'}</p>
       <h3>FORMAT</h3><div class="seg"><button data-f="0" class="${!s.doubles ? 'on' : ''}">🧍 Singles</button><button data-f="1" class="${s.doubles ? 'on' : ''}">👥 Doubles</button></div>
       ${s.doubles ? `<h3>YOUR PARTNER</h3><div class="hats">${PARTNERS.map((p) => `<button class="hat ${s.partner === p.id ? 'on' : ''}" data-p="${p.id}">${p.pet ? (p.id === 'luna' ? '🐭 ' : '🐁 ') : '🧑 '}${esc(p.n)}<small>${p.diff}</small></button>`).join('')}</div>` : ''}
       <h3>OPPONENTS</h3><div class="seg">${DIFFS.map(([k, n]) => `<button data-d="${k}" class="${s.diff === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       <h3>PLAY TO</h3><div class="seg"><button data-t="7" class="${s.to === 7 ? 'on' : ''}">⚡ 7</button><button data-t="11" class="${s.to !== 7 ? 'on' : ''}">🏆 11 (official)</button></div>
+      ${inDillers ? `<h3>BALL (INDOOR & SILENT SERVE ONLY!)</h3><div class="hats">${bChoices.map((b) => `<button class="hat ${S.eq.ball === b.id ? 'on' : ''}" data-mb="${b.id}">${b.id === 'silent' ? '🧽 ' : b.indoor ? '🟠 ' : '⚠️ '}${esc(b.n)}</button>`).join('')}</div>
+      <p class="sub">${eqBall.indoor ? '✅ Approved by Courts Manager Lola & Candy!' : '⚠️ Outdoor ball selected — Candy will bark & steal it and Lola will kick you out!'}</p>` : ''}
       <p class="sub">Win: 🪙 ${{ easy: 20, medium: 30, hard: 45, pro: 60 }[s.diff]} · rating up</p>
-      <div class="btnRow"><button class="go" id="go">▶ PLAY</button><button class="mbtn2" id="b">NOT NOW</button></div>`, (c) => {
+      <div class="btnRow"><button class="go" id="go">▶ PLAY</button>${inDillers ? '<button class="mbtn2" id="ddT">🏟️ INDOOR TOURNEY</button>' : ''}<button class="mbtn2" id="b">NOT NOW</button></div>`, (c) => {
       c.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { sfx('click'); s.doubles = b.dataset.f === '1'; this.matchSetup(court); });
       c.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => { sfx('click'); s.partner = S.partner = b.dataset.p; persist(); this.matchSetup(court); });
       c.querySelectorAll('[data-d]').forEach((b) => b.onclick = () => { sfx('click'); s.diff = b.dataset.d; this.matchSetup(court); });
       c.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { sfx('click'); s.to = +b.dataset.t; this.matchSetup(court); });
-      on(c, '#go', () => { const opps = [this.oppDef(s.diff)]; if (s.doubles) opps.push(this.oppDef(s.diff, 3)); this.start({ court, mode: 'quick', doubles: s.doubles, partner: s.doubles ? this.partnerDef(s.partner) : null, opps, to: s.to, diff: s.diff, diffK: DIFFS.findIndex((d) => d[0] === s.diff) }); });
+      c.querySelectorAll('[data-mb]').forEach((b) => b.onclick = () => { sfx('click'); S.eq.ball = b.dataset.mb; persist(); this.matchSetup(court); });
+      on(c, '#ddT', () => this.dillersTourney());
+      on(c, '#go', () => { const opps = [this.oppDef(s.diff)]; if (s.doubles) opps.push(this.oppDef(s.diff, 3)); this.start({ court, mode: 'quick', doubles: s.doubles, partner: s.doubles ? this.partnerDef(s.partner) : null, opps, to: s.to, diff: s.diff, diffK: DIFFS.findIndex((d) => d[0] === s.diff), ball: S.eq.ball }); });
       on(c, '#b', () => this.back()); }); }
   start(cfg) { closePanel(); this.app.busy = false; this.app.paused = false; this.g.startMatch(cfg); }
   // ---------------- Park Ladder ----------------
@@ -119,8 +270,10 @@ export class UI {
       on(c, '#go', () => go(next)); on(c, '#go2', () => go(LADDER[9])); on(c, '#b', () => this.back()); }); }
   // ---------------- tournaments ----------------
   tourneys() { this.open(); if (S.tourRun) return this.bracket();
-    panel(`<h2>🏆 TOURNAMENTS</h2><p class="sub">Early rounds to 7, the final to 11. Win them all for the trophy!</p><div class="shopList">${TOURNEYS.map((t) => { const lock = S.rating < t.need - 1e-6; return `<div class="shopIt ${lock ? 'lock' : ''}"><span class="ic big">${t.icon}</span><div class="si"><b>${esc(t.n)}</b><small>${t.fmt} · ${t.size} players · ${esc(COURTS[t.court].n)}</small><p>${esc(t.d)}</p></div>
+    const dillCard = dillersOwned() ? `<div class="shopIt star"><span class="ic big">🏟️</span><div class="si"><b>Drive Dillers Indoor Cup</b><small>Progressive 3-Court Indoor Tourney · Easy → Hard → Pro</small><p>Director Snowie's indoor championship! Travel across Dill Court 1, Silent Serve Court 2 & Center Stage.</p></div><button class="buy ${S.dillers && S.dillers.wins ? 'own' : ''}" id="goDillCup">${S.dillers && S.dillers.wins ? '🏆 Again' : '🪙 260'}</button></div>` : '';
+    panel(`<h2>🏆 TOURNAMENTS</h2><p class="sub">Early rounds to 7, the final to 11. Win them all for the trophy!</p><div class="shopList">${dillCard}${TOURNEYS.map((t) => { const lock = S.rating < t.need - 1e-6; return `<div class="shopIt ${lock ? 'lock' : ''}"><span class="ic big">${t.icon}</span><div class="si"><b>${esc(t.n)}</b><small>${t.fmt} · ${t.size} players · ${esc(COURTS[t.court].n)}</small><p>${esc(t.d)}</p></div>
       <button class="buy ${S.tour[t.id] ? 'own' : ''}" data-t="${t.id}" ${lock ? 'disabled' : ''}>${lock ? '🔒 ' + t.need.toFixed(1) : S.tour[t.id] ? '🏆 Again' : '🪙 ' + t.prize}</button></div>`; }).join('')}</div><button class="mbtn2" id="b">BACK</button>`, (c) => {
+      on(c, '#goDillCup', () => this.dillersTourney());
       c.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { if (b.disabled) return; const t = TOURNEYS.find((x) => x.id === b.dataset.t); const rounds = Math.log2(t.size); const opps = []; for (let i = 0; i < rounds; i++) { const d = t.diffs[Math.min(i, t.diffs.length - 1)]; opps.push([this.oppDef(d, i), this.oppDef(d, i + 5)]); }
         S.tourRun = { id: t.id, round: 0, rounds, opps }; persist(); sfx('click'); this.bracket(); }); on(c, '#b', () => this.back()); }); }
   bracket() { this.open(); const r = S.tourRun, t = TOURNEYS.find((x) => x.id === r.id); const names = ['Final', 'Semifinal', 'Quarterfinal']; const rn = (i) => names[r.rounds - 1 - i];
@@ -141,18 +294,46 @@ export class UI {
       <div class="btnRow"><button class="go" id="a">🔁 AGAIN</button><button class="mbtn2" id="o">🎯 Other drill</button><button class="mbtn2" id="b">🚶 Done</button></div>`, (c) => {
       const end = () => this.g.endMatch(); on(c, '#a', () => { end(); this.startDrill(r.drill.id, r.cfg.court); }); on(c, '#o', () => { end(); this.drills(r.cfg.court); }); on(c, '#b', () => { end(); app.resume(); }); }); }
   // ---------------- results + career ----------------
-  matchOver(res) { const app = this.app; app.busy = true; app.paused = true; const cfg = res.cfg, st = S.stats; let coins = 0, dr = 0, title = res.win ? '🏆 YOU WIN!' : '😅 GOOD GAME!', extra = '', next = null;
+  matchOver(res) { const app = this.app; app.busy = true; app.paused = true; const cfg = res.cfg, st = S.stats; let coins = 0, dr = 0, title = res.win ? '🏆 YOU WIN!' : '😅 GOOD GAME!', extra = '', next = null, dillNext = null;
     st.matches++; if (res.win) st.wins++; else st.losses++; st.longest = Math.max(st.longest || 0, res.stats.longest); S.seenMatch = true; if (res.win) S.badges.firstwin = 1; if (res.stats.spins >= 5) S.badges.spin = 1;
     const K = [0.04, 0.06, 0.09, 0.12][cfg.diffK || 0];
     if (cfg.mode === 'quick') { coins = res.win ? { easy: 20, medium: 30, hard: 45, pro: 60 }[cfg.diff] || 20 : 6; dr = res.win ? K : -0.02; }
     else if (cfg.mode === 'ladder') { const r = LADDER.find((x) => x.id === cfg.rival); if (res.win) { coins = r.pay; dr = 0.12; if (!S.beat[r.id]) { S.beat[r.id] = 1; if (S.ladder === 10 - LADDER.indexOf(r)) S.ladder--; } S.badges.ladder = 1; if (r.boss) S.badges.king = 1; extra = `${esc(r.n)}: "${esc(r.lose)}"`; } else { coins = 8; extra = `${esc(r.n)}: "${esc(r.win)}"`; } }
     else if (cfg.mode === 'tourney') { const tr = S.tourRun, t = tr && TOURNEYS.find((x) => x.id === tr.id); if (t) { if (res.win) { tr.round++; dr = 0.06; coins = 15; if (tr.round >= tr.rounds) { coins += t.prize; dr = 0.2; S.tour[t.id] = 1; S.tourRun = null; title = t.icon + ' CHAMPION!'; extra = 'You won the ' + esc(t.n) + '!'; } else { next = true; extra = 'On to the next round!'; } } else { S.tourRun = null; coins = 10; extra = 'Knocked out... the next one is yours.'; } } }
+    else if (cfg.mode === 'dillers') {
+      const rIdx = cfg.dillersRound || 0;
+      if (res.win) {
+        if (rIdx < DILLERS_ROUNDS.length - 1) {
+          const nxt = DILLERS_ROUNDS[rIdx + 1];
+          S.dillers.run = { round: rIdx + 1 };
+          coins = 35 + rIdx * 25; dr = 0.08; dillNext = rIdx + 1;
+          if (this.g.mv) this.g.mv.exitSpot = SPOTS['court_' + nxt.court] || this.g.mv.exitSpot;
+          title = `🏟️ ROUND ${rIdx + 1} WON!`;
+          extra = `🐁 Director Snowie: "Squeak!! Next stop: ${esc(COURTS[nxt.court].n)} (${nxt.diff.toUpperCase()})!"`;
+        } else {
+          S.dillers.wins = (S.dillers.wins || 0) + 1; S.dillers.run = null;
+          S.badges.dillchamp = 1; S.tour.dillers = (S.tour.dillers || 0) + 1;
+          coins = 260; dr = 0.24;
+          title = '🏟️👑 DRIVE DILLERS CHAMPION!';
+          extra = '🐁🏆 Director Snowie & Courts Manager Lola award you the GOLDEN DILL CUP!';
+        }
+      } else {
+        coins = 12; dr = -0.01;
+        extra = '🐁 Director Snowie: "So close! You can retry this round anytime at the bracket board!"';
+      }
+    }
     if (res.buffed) extra += ' 🌭 Snack power used.';
     const before = rankOf(S.rating).n; S.rating = Math.max(2.0, Math.min(5.5, +(S.rating + dr).toFixed(2))); const after = rankOf(S.rating).n; S.coins += coins; S.xp += res.stats.hits; persist();
     const sh = res.stats.shots, shots = Object.keys(sh).map((k) => k + ' ' + sh[k]).join(' · ');
     panel(`<h2>${title}</h2><div class="big">${res.score[0]} – ${res.score[1]}</div>${extra ? `<p class="sub">${extra}</p>` : ''}
       <div class="statGrid"><div><b>+${coins}</b><small>🪙 Coins</small></div><div><b>${S.rating.toFixed(2)}</b><small>⭐ Rating ${dr >= 0 ? '+' : ''}${dr.toFixed(2)}</small></div><div><b>${res.stats.longest}</b><small>🏓 Longest rally</small></div><div><b>${res.stats.spins}</b><small>🌀 Spin shots</small></div></div>
       <p class="sub">${shots || ''}${before !== after ? '<br>🎉 New rank: <b>' + after + '</b>!' : ''}</p>
-      <div class="btnRow">${next ? '<button class="go" id="n">▶ NEXT ROUND</button>' : cfg.mode === 'quick' ? '<button class="go" id="r">🔁 REMATCH</button>' : cfg.mode === 'ladder' && S.ladder >= 1 && res.win ? '<button class="go" id="l">🪜 NEXT RUNG</button>' : ''}<button class="mbtn2" id="b">🚶 Back to the park</button></div>`, (c) => {
-      const end = () => this.g.endMatch(); on(c, '#n', () => { end(); this.bracket(); }); on(c, '#r', () => { end(); this.start(Object.assign({}, cfg, { opps: cfg.opps.map((o) => this.oppDef(o.diff)) })); }); on(c, '#l', () => { end(); this.ladder(); }); on(c, '#b', () => { end(); app.resume(); }); }); }
+      <div class="btnRow">${dillNext != null ? `<button class="go" id="dn">🏟️ NEXT COURT: ${esc(COURTS[DILLERS_ROUNDS[dillNext].court].n)}</button>` : cfg.mode === 'dillers' && !res.win ? '<button class="go" id="dr">🔁 RETRY ROUND</button>' : next ? '<button class="go" id="n">▶ NEXT ROUND</button>' : cfg.mode === 'quick' ? '<button class="go" id="r">🔁 REMATCH</button>' : cfg.mode === 'ladder' && S.ladder >= 1 && res.win ? '<button class="go" id="l">🪜 NEXT RUNG</button>' : ''}<button class="mbtn2" id="b">🚶 Back to the park</button></div>`, (c) => {
+      const end = () => this.g.endMatch();
+      on(c, '#dn', () => { end(); this.dillersTourney(); });
+      on(c, '#dr', () => { end(); this.dillersTourney(); });
+      on(c, '#n', () => { end(); this.bracket(); });
+      on(c, '#r', () => { end(); this.start(Object.assign({}, cfg, { opps: cfg.opps.map((o) => this.oppDef(o.diff)) })); });
+      on(c, '#l', () => { end(); this.ladder(); });
+      on(c, '#b', () => { end(); app.resume(); }); }); }
 }

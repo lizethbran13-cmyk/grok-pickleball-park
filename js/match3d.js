@@ -46,12 +46,12 @@ function machineModel() { const b = MB(); b.g.add(P.rbox, 0x1f2937, 0, 0.45, 0, 
 export class MatchView {
   constructor(game, cfg) {
     this.game = game; this.cfg = cfg; this.C = COURTS[cfg.court]; this.cid = cfg.court; this.drill = cfg.mode === 'drill' ? DRILLS.find((d) => d.id === cfg.drill) : null;
-    this.building = this.C.kind === 'indoor' ? BUILDINGS.find((b) => b.id === 'train') : null; this.night = this.C.kind === 'night'; this.cheerT = 0; this.fp = !!S.opts.fp; this.T = 0; this.done = false;
+    this.building = this.C.kind === 'indoor' ? BUILDINGS.find((b) => b.id === (this.C.bld || 'train')) : null; this.night = this.C.kind === 'night'; this.cheerT = 0; this.fp = !!S.opts.fp; this.T = 0; this.done = false;
     this.exitSpot = SPOTS['court_' + cfg.court] || (cfg.court === 'center' ? SPOTS.stadium : [this.C.x, this.C.z + 10]);
     this.group = new THREE.Group(); E.scene.add(this.group);
     const pad = PADDLES.find((p) => p.id === S.eq.paddle) || PADDLES[0];
     let ball = BALLS.find((b) => b.id === (cfg.ball || S.eq.ball)) || BALLS[0]; if (this.C.kind === 'quiet') ball = BALLS.find((b) => b.id === 'silent'); if (this.night && S.own.ball.includes('glow') && !cfg.ball) ball = BALLS.find((b) => b.id === 'glow');
-    if (cfg.mode !== 'drill' && cfg.mode !== 'quick' && !ball.legal) ball = BALLS[0]; this.ballDef = ball; this.pad = pad;
+    if (cfg.mode !== 'drill' && cfg.mode !== 'quick' && cfg.mode !== 'dillers' && this.C.bld !== 'dillers' && !ball.legal) ball = BALLS[0]; this.ballDef = ball; this.pad = pad;
     // who is playing: index 0 is always you (team 0, near side). Doubles: 0,1 = your team; 2,3 = them.
     const me = { n: S.name || 'You', look: S.look, hat: S.eq.hat, pad, ctrl: 'human' };
     const list = [me]; if (cfg.doubles) list.push(Object.assign({ ctrl: 'ai' }, cfg.partner)); (cfg.opps || []).forEach((o) => list.push(Object.assign({ ctrl: 'ai' }, o)));
