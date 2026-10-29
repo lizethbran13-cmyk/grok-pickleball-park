@@ -6,6 +6,7 @@ import * as K from './kit.js?v=ppk2';
 import { rbox } from './world.js?v=ppk2';
 import { shell, part, onSide } from './bld.js?v=ppk2';
 import { buildDillers } from './dillers.js?v=ppk2';
+import { buildSmashComplex } from './smash.js?v=ppk2';
 import { txt, poster, frameArt, wallWord, clockW, pendant, planter, awning, trash } from './art.js?v=ppk2';
 import { court, PAL, CW, fence, fencedBox, bleachers, lightTower, umpireChair, scoreFrame, paddleProp, hopper, ballBucket } from './court.js?v=ppk2';
 import { COURTS } from './data.js?v=ppk2';
@@ -15,7 +16,7 @@ export const SPOTS = {}; export const SEATS = []; export const SITS = []; export
 export const ENV = { sunDir: [0.5, 0.78, 0.38], sunColor: 0xfff1dc, sunI: 2.5, hemiSky: 0xd6ecff, hemiGround: 0x7a9a5a, hemiI: 0.62, skyTop: 0x2f7fe0, skyMid: 0xa8d8ff, skyBot: 0xeaf6ff, fog: 0xd8ecff, fogD: 0.0032, exposure: 1.0, envI: 0.85, bloomT: 1.05, bloomS: 0.35, sunDisc: 1, stars: 0 };
 export const NIGHT = { sunDir: [-0.3, 0.7, -0.5], sunColor: 0x9db4ff, sunI: 0.55, hemiSky: 0x3a4a8a, hemiGround: 0x1a2030, hemiI: 0.45, skyTop: 0x050a24, skyMid: 0x1b2a5e, skyBot: 0x2a3570, fog: 0x141c3c, fogD: 0.006, exposure: 1.05, envI: 0.35, bloomT: 0.9, bloomS: 0.65, moon: 1, stars: 1, nebula: 0x30205a };
 // reserved rectangles (no trees / clutter): [x0,z0,x1,z1]
-const RES = [[-90, -14, 90, 26], [-94, -38, -84, 26], [84, -38, 94, 26], [-94, -34, 94, -26], [-20, -30, 20, 8], [-64, -64, -44, -36], [44, -64, 64, -36], [-56, 40, -14, 74], [14, 42, 48, 72], [-38, 76, -2, 98], [12, 74, 54, 114], [-6, 8, 6, 124], [-20, 42, 20, 78], [-74, 102, -8, 138], [-14, 112, 14, 126], [-16, -64, 16, -36]];
+const RES = [[-105, 22, -53, 81], [-90, -14, 90, 26], [-94, -38, -84, 26], [84, -38, 94, 26], [-94, -34, 94, -26], [-20, -30, 20, 8], [-64, -64, -44, -36], [44, -64, 64, -36], [-56, 40, -14, 74], [14, 42, 48, 72], [-38, 76, -2, 98], [12, 74, 54, 114], [-6, 8, 6, 124], [-20, 42, 20, 78], [-74, 102, -8, 138], [-14, 112, 14, 126], [-16, -64, 16, -36]];
 const free = (x, z, m = 2) => !RES.some(([a, b, c, d]) => x > a - m && x < c + m && z > b - m && z < d + m);
 // ---------------- little helpers ----------------
 function pball(w, bucket, x, y, z, r, col = 0xe6ff3b, holes = 0x9fb81a) { w.add(bucket, sph(28), col, x, y, z, 0, 0, 0, r, r, r); const n = 12; for (let i = 0; i < n; i++) { const t = Math.acos(1 - 2 * (i + 0.5) / n), p = i * 2.399; const nx = Math.sin(t) * Math.cos(p), ny = Math.cos(t), nz = Math.sin(t) * Math.sin(p); w.add(bucket, sph(12), holes, x + nx * r * 0.97, y + ny * r * 0.97, z + nz * r * 0.97, 0, 0, 0, r * 0.13, r * 0.13, r * 0.13); } }
@@ -60,7 +61,7 @@ export function buildMap(w) {
   { const N = 120, Sz = 420; const g = new THREE.PlaneGeometry(Sz, Sz, N, N); g.rotateX(-PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i) - 30, r = Math.max(Math.abs(x) * 0.95, Math.abs(z) * 0.9); const hill = r > 118 ? Math.pow((r - 118) / 70, 1.6) * 22 * (0.7 + 0.3 * Math.sin(x * 0.05) * Math.cos(z * 0.04)) : 0; p.setY(i, hill - 0.02); p.setZ(i, p.getZ(i) + 30); } g.computeVertexNormals();
     w.addFn('m', g, (c, x, y, z) => { const n = Math.sin(x * 0.19) * Math.cos(z * 0.15) * 0.5 + Math.sin(x * 0.04 + z * 0.06) * 0.5; c.setHSL(0.27 + n * 0.025, 0.52, 0.42 + n * 0.05 + Math.min(0.08, y * 0.004)); }, 0, 0, 0); w.solid(-210, -3, -180, 210, 0, 240, { floor: true }); }
   paths(w); plaza(w); entrance(w); stadium(w); complexes(w); nightCourt(w); quietCourt(w); northLawn(w);
-  clubhouse(w); proShop(w); snackBar(w); training(w); shopFill(w); clubFill(w); snackFill(w); trainFill(w); buildDillers(w, { SPOTS, SEATS, SITS, STANDS, RES }); nature(w);
+  clubhouse(w); proShop(w); snackBar(w); training(w); shopFill(w); clubFill(w); snackFill(w); trainFill(w); buildDillers(w, { SPOTS, SEATS, SITS, STANDS, RES }); buildSmashComplex(w, SPOTS, SEATS, SITS, STANDS); nature(w);
   w.region = 'out';
 }
 function paths(w) { const T = (x0, z0, x1, z1, c1 = 0xe8dcc4, c2 = 0xdccfb4) => K.floor(w, x0, z0, x1, z1, 'tile', 0.02, c1, c2, 1.5);

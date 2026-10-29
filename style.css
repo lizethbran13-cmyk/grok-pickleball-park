@@ -216,3 +216,39 @@ html,body{background:#0f3d24}
 #mt .mpop.bad{text-shadow:0 3px 0 #7f1d1d}
 @keyframes mpop{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}15%{opacity:1;transform:translate(-50%,0) scale(1.1)}100%{opacity:0;transform:translate(-50%,-60px) scale(1)}}
 #ui.open ~ #mt,#dlg.on ~ #mt{display:none}
+
+/* ---- Super Smash Expansion (DLC #84) ---- */
+.smChars{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:6px 0}
+.smChars button{border:3px solid rgba(255,255,255,.35);border-radius:16px;background:rgba(15,23,42,.78);padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;color:#fff;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.smChars button i{font-style:normal;font-size:26px;line-height:1.1}
+.smChars button b{font-size:12.5px;font-weight:900}
+.smChars button small{font-size:9.5px;font-weight:900;color:var(--c,#fde047);letter-spacing:.3px}
+.smChars button.on{border-color:#fde047;background:rgba(253,224,71,.22);box-shadow:0 0 0 3px rgba(253,224,71,.4);transform:translateY(-1px)}
+.smDesc{font-size:13px;background:rgba(0,0,0,.25);border-radius:12px;padding:6px 10px;margin:4px 0;min-height:2.4em}
+.gritBar{background:rgba(0,0,0,.35);border-radius:14px;padding:8px 12px;margin:6px 0;border:2px solid rgba(255,255,255,.25)}
+.gritTrack{height:12px;border-radius:999px;background:rgba(0,0,0,.45);overflow:hidden;margin-top:5px}
+.gritTrack i{display:block;height:100%;border-radius:999px;transition:width .25s}
+#mt #smHud{position:absolute;top:calc(env(safe-area-inset-top) + 64px + var(--wip, 0px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none;z-index:2}
+#mt #smHud.hidden{display:none}
+#mt .smBar{display:flex;align-items:center;gap:5px;background:rgba(15,12,40,.84);border:2px solid #fff;border-radius:14px;padding:3px 8px;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+#mt .smBar.t1{flex-direction:row-reverse}
+#mt .smBar .ic{font-size:17px}
+#mt .smBar .tr{width:82px;height:10px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden}
+#mt .smBar.t1 .tr{transform:scaleX(-1)}
+#mt .smBar .tr i{display:block;height:100%;width:0;border-radius:6px;transition:width .2s}
+#mt .smBar.full .tr i{background:linear-gradient(90deg,#ffe14d,#ff4fd8,#3ff0ff)!important;animation:smPulse .4s infinite alternate}
+#mt .smBar.armed{border-color:#ff4fd8;box-shadow:0 0 14px #ff4fd8}
+#mt .smBar .ct{font-size:11px;font-weight:900;color:#ffe14d;min-width:26px;text-align:center}
+#mt .smGrit{background:rgba(15,12,40,.84);border:2px solid #fde047;border-radius:12px;padding:3px 7px;font-size:11px;font-weight:900;color:#fff;white-space:nowrap}
+@keyframes smPulse{to{filter:brightness(1.4)}}
+#mt #bSuper{position:absolute;right:calc(env(safe-area-inset-right) + 216px);bottom:calc(env(safe-area-inset-bottom) + 14px);width:80px;height:80px;border-radius:50%;border:3px solid #fff;background:#3b2a6b;color:#fff;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.35);pointer-events:auto;touch-action:manipulation;cursor:pointer}
+#mt #bSuper.hidden{display:none}
+#mt #bSuper i{font-style:normal;font-size:25px;line-height:1;position:relative;z-index:1}
+#mt #bSuper b{font-size:10.5px;font-weight:900;letter-spacing:.5px;position:relative;z-index:1;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+#mt #bSupF{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,#7c3aed,#c084fc);transition:height .2s}
+#mt #bSuper.ready{animation:smGlow .45s infinite alternate}
+#mt #bSuper.ready #bSupF{background:linear-gradient(0deg,#ff4fd8,#ffe14d)}
+#mt #bSuper.armed{box-shadow:0 0 22px #ff4fd8;border-color:#ff4fd8}
+#mt #bSuper.armed #bSupF{background:linear-gradient(0deg,#e11d48,#ff4fd8)}
+@keyframes smGlow{from{transform:scale(1);box-shadow:0 0 6px #ffe14d}to{transform:scale(1.08);box-shadow:0 0 24px #ff4fd8}}
+@media (max-width:520px){#mt #bSuper{right:calc(env(safe-area-inset-right) + 12px);bottom:calc(env(safe-area-inset-bottom) + 146px);width:72px;height:72px}#mt .smBar .tr{width:58px}}

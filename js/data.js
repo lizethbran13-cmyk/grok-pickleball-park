@@ -1,4 +1,4 @@
-// Grok Pickleball Park - game data: paddles, balls, gear, career ranks, ladder rivals, tournaments, drills, courts.
+// Grok Pickleball Park - game data: paddles, balls, gear, career ranks, ladder rivals, tournaments, drills, courts, and Super Smash DLC.
 export const PADDLES = [
   { id: 'starter', n: 'Park Starter', by: 'Grok Rec', pow: 0.45, ctl: 0.5, spin: 0.25, price: 0, a: 0x22c55e, b: 0x14532d, face: 'smooth', d: 'A trusty wooden-core rec paddle. Everyone starts somewhere!' },
   { id: 'softtouch', n: 'Soft Touch Dinker', by: 'Kitchen Co.', pow: 0.35, ctl: 0.88, spin: 0.45, price: 150, a: 0x38bdf8, b: 0x0c4a6e, face: 'smooth', d: 'Thick honeycomb core that soaks up pace. Dinks land like feathers.' },
@@ -6,6 +6,10 @@ export const PADDLES = [
   { id: 'maxgrit', n: 'MaxGrit Signature', by: 'Franklin-style', pow: 0.62, ctl: 0.78, spin: 0.96, price: 320, a: 0x111827, b: 0xef4444, face: 'grit', star: true, d: 'Like your real paddles! Gritty fiberglass MaxGrit face grabs the ball for big topspin and slicey dinks, and a polypropylene honeycomb core keeps it soft. USA Pickleball approved.' },
   { id: 'thunder', n: 'Thunder Drive', by: 'Bam Sports', pow: 0.92, ctl: 0.4, spin: 0.45, price: 260, a: 0xf97316, b: 0x7c2d12, face: 'smooth', d: 'Elongated power paddle. Drives fly... and so do mistakes.' },
   { id: 'shell', n: 'Shell Shield', by: 'Tortuga Tech', pow: 0.5, ctl: 0.95, spin: 0.55, price: 300, a: 0x2dd4bf, b: 0x0f766e, face: 'smooth', d: 'Drop-tested by Torty herself. Rock-solid control, tortoise-tough.' },
+  { id: 'rocket', n: 'Rocket Blaster', by: 'Super Smash Lab', pow: 0.96, ctl: 0.74, spin: 0.82, price: 250, a: 0xef4444, b: 0xffffff, face: 'carbon', star: true, smash: true, d: 'OG Super Smash power paddle! Fires with explosive pop and boosts Super Energy charge by +20%.' },
+  { id: 'thunder_strike', n: 'Thunder Strike', by: 'Super Smash Lab', pow: 0.92, ctl: 0.80, spin: 0.88, price: 280, a: 0xfacc15, b: 0x1e293b, face: 'carbon', star: true, smash: true, d: 'High-voltage carbon core from OG Smash Mode! Crackles with electric pace on overhead smashes.' },
+  { id: 'frost_bite', n: 'Frost Bite', by: 'Super Smash Lab', pow: 0.84, ctl: 0.94, spin: 0.90, price: 280, a: 0x38bdf8, b: 0x0c4a6e, face: 'grit', star: true, smash: true, d: 'Cryo-cooled honeycomb face! Surgical control for kitchen resets plus icy overhead put-aways.' },
+  { id: 'maxgrit_smash', n: 'MaxGrit Smash XL', by: 'Franklin × Tortuga Tech', pow: 0.95, ctl: 0.92, spin: 0.99, price: 380, a: 0x111827, b: 0xf97316, face: 'grit', star: true, smash: true, d: 'Elongated Franklin MaxGrit carbon-fiberglass Smash paddle! Double-baked grit for 3,200 RPM topspin smashes + tortoise-armored edge guard.' },
   { id: 'carbon', n: 'Carbon Raw Pro', by: 'Grok Pro', pow: 0.8, ctl: 0.82, spin: 0.82, price: 600, a: 0x374151, b: 0x9ca3af, face: 'carbon', d: 'Raw carbon fiber face. The all-rounder the pros at the stadium use.' },
   { id: 'golden', n: 'Golden Pickle', by: 'Legend Series', pow: 0.9, ctl: 0.9, spin: 0.9, price: 950, a: 0xfcd34d, b: 0xb45309, face: 'carbon', d: 'Only for champions. Shiny, perfectly balanced, ridiculously cool.' },
 ];
@@ -13,6 +17,7 @@ export const BALLS = [
   { id: 'outdoor', n: 'Outdoor 40-Hole', price: 0, col: 0xe6ff3b, drag: 0.042, bounce: 0.66, legal: true, d: 'Hard plastic, 40 holes, official size. Fast and true outside.' },
   { id: 'indoor', n: 'Indoor 26-Hole', price: 80, col: 0xff8a1f, drag: 0.05, bounce: 0.62, legal: true, indoor: true, d: 'Softer, bigger holes. A little slower: great for long dink rallies inside Drive Dillers!' },
   { id: 'silent', n: 'Silent Serve Foam', price: 60, col: 0xfde047, drag: 0.07, bounce: 0.74, legal: false, quiet: true, indoor: true, d: 'Like your real Silent Serve balls! Quiet high-density foam, official 74 mm size, bounces higher and hurts way less. Legal on all Drive Dillers indoor courts!' },
+  { id: 'silent_smash', n: 'Silent Serve Super Foam', price: 90, col: 0xfbbf24, drag: 0.058, bounce: 0.78, legal: true, quiet: true, indoor: true, glow: true, smash: true, d: 'Turbo-charged Franklin Silent Serve foam ball! Whisper-quiet 42 dB thump, juicy high pop-ups for overhead smashes, and approved on every court in the park!' },
   { id: 'dillball', n: 'Drive Dillers 26-Hole Pro', price: 75, col: 0x34d399, drag: 0.048, bounce: 0.65, legal: true, indoor: true, d: 'Official mint-emerald 26-hole indoor tournament ball of Drive Dillers! Crisp bounce on hardwood and sport-court surfaces.' },
   { id: 'glow', n: 'Night Glow Ball', price: 140, col: 0x7cff4f, drag: 0.042, bounce: 0.66, legal: true, glow: true, d: 'Glows under the Night Lights Court towers. Same feel as outdoor.' },
 ];
@@ -91,6 +96,154 @@ export const DILLERS_ROUNDS = [
     blurb: 'Travel to Drive Dillers Center Stage under the arena spotlights! Win to 11 for the Golden Dill Cup!'
   },
 ];
+
+// Super Smash Expansion (DLC #84): all 6 Smashers from OG Grok Pickleball + unique Super Smashes!
+export const SMASHERS = [
+  {
+    id: 'rita',
+    n: 'Rocket Rita',
+    icon: '🚀',
+    tag: 'BOOM! Watch the landing!',
+    superName: '🚀 ROCKET BALL', sn: '🚀 ROCKET BALL',
+    superDesc: 'Fires a blazing rocket ball with a 3D flame cone that EXPLODES on impact — unreturnable 3-pt winner!', desc: 'Fires a blazing rocket ball with a 3D flame cone that EXPLODES on impact — unreturnable 3-pt winner!',
+    superKind: 'rocket',
+    col: '#ef4444',
+    colHex: 0xef4444,
+    pad: 'rocket',
+    look: { skin: 1, hair: 2, hairC: 4, shirt: 6, pants: 5 },
+    hat: 'visor',
+    style: { dink: 0.7, drive: 1.6, lob: 0.6, smash: 2.4 }
+  },
+  {
+    id: 'fran',
+    n: 'Frosty Fran',
+    icon: '❄️',
+    tag: 'Stay cool in the kitchen!',
+    superName: '❄️ FREEZE SMASH', sn: '❄️ FREEZE SMASH',
+    superDesc: 'Encases the opponent in a 3D translucent ice block for 2.2 seconds so they cannot reach the ball!', desc: 'Encases the opponent in a 3D translucent ice block for 2.2 seconds so they cannot reach the ball!',
+    superKind: 'freeze',
+    col: '#38bdf8',
+    colHex: 0x38bdf8,
+    pad: 'frost_bite',
+    look: { skin: 0, hair: 1, hairC: 5, shirt: 2, pants: 2 },
+    hat: 'headband',
+    style: { dink: 1.3, drive: 1.2, lob: 0.9, smash: 2.0 }
+  },
+  {
+    id: 'bo',
+    n: 'Bolt Bo',
+    icon: '⚡',
+    tag: 'BZZT! Too fast to see!',
+    superName: '⚡ THUNDER SMASH', sn: '⚡ THUNDER SMASH',
+    superDesc: 'Blasts a 22 m/s lightning bolt shot across the net and zaps the opponent with electric stun for 1.1s!', desc: 'Blasts a 22 m/s lightning bolt shot across the net and zaps the opponent with electric stun for 1.1s!',
+    superKind: 'zap',
+    col: '#facc15',
+    colHex: 0xfacc15,
+    pad: 'thunder_strike',
+    look: { skin: 2, hair: 4, hairC: 3, shirt: 8, pants: 3 },
+    hat: 'cap',
+    style: { dink: 0.6, drive: 1.9, lob: 0.5, smash: 2.5 }
+  },
+  {
+    id: 'bertha',
+    n: 'Big Bertha',
+    icon: '🏐',
+    tag: 'BIGGER BALL = BIGGER SMASH!',
+    superName: '🏐 GIANT BALL', sn: '🏐 GIANT BALL',
+    superDesc: 'Inflates the pickleball to 3.4× GIANT size — when it bounces it launches sky-high over their head!', desc: 'Inflates the pickleball to 3.4× GIANT size — when it bounces it launches sky-high over their head!',
+    superKind: 'giant',
+    col: '#f97316',
+    colHex: 0xf97316,
+    pad: 'maxgrit_smash',
+    look: { skin: 3, hair: 3, hairC: 0, shirt: 8, pants: 5 },
+    hat: 'visor',
+    style: { dink: 0.8, drive: 1.5, lob: 0.8, smash: 2.6 }
+  },
+  {
+    id: 'dan',
+    n: 'Dill Dan',
+    icon: '🥒',
+    tag: 'Triple the pickles!',
+    superName: '🥒 PICKLE SPLIT', sn: '🥒 PICKLE SPLIT',
+    superDesc: 'Splits the ball mid-air into 3 spinning green pickles — 2 fake decoys confuse the opponent!', desc: 'Splits the ball mid-air into 3 spinning green pickles — 2 fake decoys confuse the opponent!',
+    superKind: 'split',
+    col: '#65a30d',
+    colHex: 0x65a30d,
+    pad: 'diller',
+    look: { skin: 1, hair: 4, hairC: 1, shirt: 0, pants: 0 },
+    hat: 'pickle',
+    style: { dink: 1.2, drive: 1.3, lob: 1.1, smash: 2.1 }
+  },
+  {
+    id: 'kiki',
+    n: 'Curvy Kiki',
+    icon: '🍌',
+    tag: 'Watch that banana curve!',
+    superName: '🍌 BANANA CURVE', sn: '🍌 BANANA CURVE',
+    superDesc: 'Wicked banana-hook topspin swerves hard into the corner and makes the opponent slip on a peel!', desc: 'Wicked banana-hook topspin swerves hard into the corner and makes the opponent slip on a peel!',
+    superKind: 'banana',
+    col: '#ff4fd8',
+    colHex: 0xff4fd8,
+    pad: 'maxgrit',
+    look: { skin: 4, hair: 1, hairC: 0, shirt: 3, pants: 5 },
+    hat: 'visor',
+    style: { dink: 1.1, drive: 1.5, lob: 0.9, smash: 2.2 }
+  }
+];
+
+// Super Smash Cup 3-Round Tournament across Lava Island -> Moon Base -> Candy Stadium!
+export const SMASH_CUP_ROUNDS = [
+  {
+    round: 0,
+    stage: 'Round 1 · Lava Island Opener',
+    court: 'smash_lava',
+    courtName: '🌋 Lava Island Smash Court',
+    diff: 'medium',
+    diffK: 1,
+    to: 11,
+    ball: 'silent_smash',
+    pay: 75,
+    smasher: 'rita',
+    smasher2: 'bo',
+    opp: { id: 'rita', n: 'Rocket Rita', diff: 'medium', look: { skin: 1, hair: 2, hairC: 4, shirt: 6, pants: 5 }, hat: 'visor' },
+    opp2: { id: 'bo', n: 'Bolt Bo', diff: 'medium', look: { skin: 2, hair: 4, hairC: 3, shirt: 8, pants: 3 }, hat: 'cap' },
+    blurb: 'Battle Rocket Rita on the volcanic Lava Island Smash Court! Watch out for her 🚀 ROCKET BALL!'
+  },
+  {
+    round: 1,
+    stage: 'Round 2 · Moon Base Semifinal',
+    court: 'smash_moon',
+    courtName: '🚀 Moon Base Smash Court',
+    diff: 'hard',
+    diffK: 2,
+    to: 11,
+    ball: 'silent_smash',
+    pay: 110,
+    smasher: 'fran',
+    smasher2: 'bertha',
+    opp: { id: 'fran', n: 'Frosty Fran', diff: 'hard', look: { skin: 0, hair: 1, hairC: 5, shirt: 2, pants: 2 }, hat: 'headband' },
+    opp2: { id: 'bertha', n: 'Big Bertha', diff: 'hard', look: { skin: 3, hair: 3, hairC: 0, shirt: 8, pants: 5 }, hat: 'visor' },
+    blurb: 'Blast off to Moon Base Smash Court! Dodge Frosty Fran\'s ❄️ FREEZE SMASH and Big Bertha\'s 🏐 GIANT BALL!'
+  },
+  {
+    round: 2,
+    stage: 'Final · Candy Stadium Championship',
+    court: 'smash_candy',
+    courtName: '🍭 Candy Stadium Smash Court',
+    diff: 'pro',
+    diffK: 3,
+    to: 15,
+    ball: 'silent_smash',
+    pay: 300,
+    ump: true,
+    smasher: 'dan',
+    smasher2: 'kiki',
+    opp: { id: 'dan', n: 'Dill Dan', diff: 'pro', look: { skin: 1, hair: 4, hairC: 1, shirt: 0, pants: 0 }, hat: 'pickle' },
+    opp2: { id: 'kiki', n: 'Curvy Kiki', diff: 'pro', look: { skin: 4, hair: 1, hairC: 0, shirt: 3, pants: 5 }, hat: 'visor' },
+    blurb: 'Championship Final on Candy Stadium Smash Court with Umpire Pi-rat! Defeat Dill Dan & Curvy Kiki for the Super Smash Cup!'
+  }
+];
+
 export const DRILLS = [
   { id: 'dink', n: 'Dink Drill', icon: '🪶', d: 'Let it bounce, then dink it back into the kitchen. Count clean dinks in 60 s.', best: 'dinks' },
   { id: 'drop', n: 'Third-Shot Drop', icon: '🎯', d: 'From the baseline, drop the ball softly into the kitchen.', best: 'drops' },
@@ -109,6 +262,9 @@ export const COURTS = {
   dill1: { n: 'Dill Court 1 (Indoor Rec)', x: 72, z: 38, kind: 'indoor', bld: 'dillers', dlc: true },
   dill2: { n: 'Dill Court 2 (Silent Serve Foam)', x: 86.8, z: 38, kind: 'indoor', bld: 'dillers', dlc: true },
   dill3: { n: 'Drive Dillers Center Stage', x: 78.5, z: 60.5, kind: 'indoor', bld: 'dillers', dlc: true },
+  smash_lava: { n: 'Lava Island Smash Court', x: -72, z: 38, kind: 'smash', smashTheme: 'lava', smashDlc: true, icon: '🌋' },
+  smash_moon: { n: 'Moon Base Smash Court', x: -90, z: 38, kind: 'smash', smashTheme: 'moon', smashDlc: true, icon: '🚀' },
+  smash_candy: { n: 'Candy Stadium Smash Court', x: -81, z: 64, kind: 'smash', smashTheme: 'candy', smashDlc: true, icon: '🍭' },
 };
 export const PARTNERS = [
   { id: 'kai', n: 'Coach Kai', diff: 'hard', look: { skin: 2, hair: 0, hairC: 1, shirt: 2, pants: 1 }, hat: 'visor' },

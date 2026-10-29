@@ -21,12 +21,12 @@ import { compact } from './compact.js?v=ppk2';
 import { COURTS, PADDLES, BALLS } from './data.js?v=ppk2';
 import { LINES, goal } from './story.js?v=ppk2';
 import { MatchView } from './match3d.js?v=ppk2';
-import { dillersOwned } from './dlc.js?v=ppk2';
+import { dillersOwned, smashOwned } from './dlc.js?v=ppk2';
 const PI = Math.PI, PB = window.PB;
 const _r = new THREE.Ray(), _v = new THREE.Vector3(), _b = new THREE.Box3(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _e = new THREE.Euler();
 // shared instanced paddle + ball geometry for the ambient players
 function paddleGeo() { const b = new Builder(); b.add(P.rbox, 0xffffff, 0, 0.12, 0, 0, 0, 0, 0.2, 0.26, 0.016); b.add(P.capsule, 0x1f2937, 0, -0.08, 0, 0, 0, 0, 0.05, 0.12, 0.045); return compact(b.build(), 'g'); }
-const AMBIENT = [['w1', true], ['w3', false], ['e2', true], ['e4', false], ['center', true], ['night', false], ['dill1', false], ['dill2', true]];
+const AMBIENT = [['w1', true], ['w3', false], ['e2', true], ['e4', false], ['center', true], ['night', false], ['dill1', false], ['dill2', true], ['smash_lava', false], ['smash_moon', true]];
 export class Game {
   constructor(app) {
     this.app = app; app.SPOTS = SPOTS; this.scene = E.scene; this.T = 0; this.fp = false; this.fpPitch = 0; this.mv = null;
@@ -37,6 +37,7 @@ export class Game {
     this.cam = new FollowCam(); this.cam.yaw = 0; this.cam.snap = true;
     this.inB = null; this.acts = []; this.act = null; this.npcs = [];
     this.crowd = new Crowd(this.scene, 230); this.buildPeople(); this.buildAmbient(); this.buildPets(); this.buildActs(); this.setVis(true);
+    const hc = document.getElementById('hPadChip'); if (hc) hc.onclick = () => this.app.ui.smashForge();
   }
   add(o) { this.scene.add(o); return o; }
   // ---------------- people: fans in the bleachers, folks on benches, shoppers, staff, walkers on the paths ----------------
@@ -55,25 +56,24 @@ export class Game {
     this.marge = this.people.find((p) => p.name === 'Marge'); }
   // ---------------- ambient matches: real AI-vs-AI pickleball on the courts (cheap instanced people) ----------------
   buildAmbient() { this.amb = []; const look = (s) => this.crowd.look(s, false);
-    AMBIENT.forEach(([id, dbl], k) => { const C = COURTS[id]; if (!C || (C.dlc && !dillersOwned())) return; const n = dbl ? 4 : 2; const ps = []; for (let i = 0; i < n; i++) ps.push({ ctrl: 'ai', diff: ['easy', 'medium', 'hard', 'medium'][(i + k) % 4] });
+    AMBIENT.forEach(([id, dbl], k) => { const C = COURTS[id]; if (!C || (C.dlc && !dillersOwned()) || (C.smashDlc && !smashOwned())) return; const n = dbl ? 4 : 2; const ps = []; for (let i = 0; i < n; i++) ps.push({ ctrl: 'ai', diff: ['easy', 'medium', 'hard', 'medium'][(i + k) % 4] });
       const reg = C.bld ? 'in_' + C.bld : 'out';
       const m = new PB.Match({ doubles: dbl, seed: 77 + k, players: ps }); const figs = m.players.map((p, i) => ({ x: C.x, z: C.z, y: 0.07, ry: 0, look: look(7000 + k * 10 + i), region: reg, sp: 0, wt: i, pick: 0, ambP: p }));
       this.amb.push({ id, C, m, figs, dbl, k, hidden: false, region: reg }); });
-    this.padMesh = new THREE.InstancedMesh(paddleGeo(), MATS.g, 24); this.padMesh.castShadow = true; this.padMesh.frustumCulled = false; this.add(this.padMesh);
-    this.ballMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.037 * 1.6, 14, 10), new THREE.MeshStandardMaterial({ color: 0xe6ff3b, roughness: 0.45, emissive: 0x3a4a00, emissiveIntensity: 0.4 }), 8); this.ballMesh.castShadow = true; this.ballMesh.frustumCulled = false; this.add(this.ballMesh);
-    const pc = [0xef4444, 0x2563eb, 0x22c55e, 0xf97316, 0xa855f7, 0x111827]; const col = new THREE.Color(); for (let i = 0; i < 24; i++) { col.setHex(pc[i % pc.length]); this.padMesh.setColorAt(i, col); } }
+    this.padMesh = new THREE.InstancedMesh(paddleGeo(), MATS.g, 32); this.padMesh.castShadow = true; this.padMesh.frustumCulled = false; this.add(this.padMesh);
+    this.ballMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.037 * 1.6, 14, 10), new THREE.MeshStandardMaterial({ color: 0xe6ff3b, roughness: 0.45, emissive: 0x3a4a00, emissiveIntensity: 0.4 }), 10); this.ballMesh.castShadow = true; this.ballMesh.frustumCulled = false; this.add(this.ballMesh);
+    const pc = [0xef4444, 0x2563eb, 0x22c55e, 0xf97316, 0xa855f7, 0x111827]; const col = new THREE.Color(); for (let i = 0; i < 32; i++) { col.setHex(pc[i % pc.length]); this.padMesh.setColorAt(i, col); } }
   stepAmbient(dt) { const me = this.me, RM = this.world.regionMeshes; let np = 0, nb = 0;
     for (const A of this.amb) { const C = A.C, regVis = A.region === 'out' ? true : !!(RM[A.region] && RM[A.region][0] && RM[A.region][0].visible); const near = regVis && Math.hypot(me.x - C.x, me.z - C.z) < 75 && !A.hidden; A.near = near; if (!near) { A.figs.forEach((f) => f.vis = false); continue; }
       const m = A.m; m.update(dt); if (m.phase === 'over') { A.m = new PB.Match({ doubles: A.dbl, seed: (Math.random() * 1e6) | 0, players: m.players.map((p) => ({ ctrl: 'ai', diff: p.diff })) }); A.figs.forEach((f, i) => f.ambP = A.m.players[i]); }
       A.figs.forEach((f) => { const p = f.ambP; f.x = C.x + p.x; f.z = C.z + p.z; f.ry = p.face; f.sp = p.spd || 0; f.wt = (f.wt || 0) + dt * (2 + f.sp * 4.2); f.pick = p.swingT < 0.35 ? 0.8 - p.swingT * 2 : 0; f.vis = true;
-        if (np < 24) { const sw = p.swingT < 0.35 ? Math.sin(p.swingT / 0.35 * PI) : 0, side = -0.34; _e.set(-0.4 - sw * 1.2, p.face + 0.3 - sw * 0.8, 0); _q.setFromEuler(_e); _v.set(f.x + Math.cos(p.face) * -side + Math.sin(p.face) * 0.3, 0.98 + sw * 0.25, f.z - Math.sin(p.face) * -side + Math.cos(p.face) * 0.3); _m.compose(_v, _q, _s.set(1, 1, 1)); this.padMesh.setMatrixAt(np++, _m); } });
-      const b = m.ball; if (nb < 8 && (b.live || m.phase === 'serve' || m.phase === 'pre')) { _m.compose(_v.set(C.x + b.x, b.y, C.z + b.z), _q.identity(), _s.set(1, 1, 1)); this.ballMesh.setMatrixAt(nb++, _m); } }
+        if (np < 32) { const sw = p.swingT < 0.35 ? Math.sin(p.swingT / 0.35 * PI) : 0, side = -0.34; _e.set(-0.4 - sw * 1.2, p.face + 0.3 - sw * 0.8, 0); _q.setFromEuler(_e); _v.set(f.x + Math.cos(p.face) * -side + Math.sin(p.face) * 0.3, 0.98 + sw * 0.25, f.z - Math.sin(p.face) * -side + Math.cos(p.face) * 0.3); _m.compose(_v, _q, _s.set(1, 1, 1)); this.padMesh.setMatrixAt(np++, _m); } });
+      const b = m.ball; if (nb < 10 && (b.live || m.phase === 'serve' || m.phase === 'pre')) { _m.compose(_v.set(C.x + b.x, b.y, C.z + b.z), _q.identity(), _s.set(1, 1, 1)); this.ballMesh.setMatrixAt(nb++, _m); } }
     this.padMesh.count = np; this.padMesh.instanceMatrix.needsUpdate = true; this.ballMesh.count = nb; this.ballMesh.instanceMatrix.needsUpdate = true; }
-  // ---------------- the 5 pets + Drive Dillers cameos ----------------
+  // ---------------- the 5 pets + Drive Dillers + Super Smash cameos ----------------
   npc(id, o) { const p = makePet(id, o); p.x = o.at[0]; p.z = o.at[1]; p.y = o.y || 0.07; p.yaw = o.yaw || 0; p.home = [p.x, p.z]; p.walk = o.walk || null; p.wi = 0; p.wait = 0; p.talk = o.talk; p.label = o.label; p.region = o.region; p.root.position.set(p.x, p.y, p.z); p.root.rotation.y = p.yaw; this.add(p.root); this.npcs.push(p); return p; }
   humanNpc(look, o) {
     const rig = makeHuman(look), holder = new THREE.Group(); holder.add(rig.root);
-    // Add a sporty emerald visor & golden manager badge on Lola!
     const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.21, 0.06, 16, 1, false, -PI * 0.55, PI * 1.1), new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.4 }));
     visor.position.set(0, 1.56, 0.06); holder.add(visor);
     const badge = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.02), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.5, roughness: 0.3 }));
@@ -87,10 +87,9 @@ export class Game {
     this.snowie = this.npc('snowie', { at: SP.snowie, y: 1.13, yaw: PI / 2, s: 1.25, label: '🐁 Snowie\'s snacks', region: 'in_snack', talk: () => this.talkSnowie() });
     this.pirat = this.npc('pirat', { at: [SP.ump[0], SP.ump[2]], y: SP.ump[1] + 0.06, yaw: PI / 2, s: 1.25, label: '🏴‍☠️ Umpire Pi-rat', region: 'out', talk: () => talk(LINES.pirat) });
     const q = SP.candyPatrol; this.candy = this.npc('candy', { at: q, yaw: 0, s: 1.0, label: '🐶 Candy (ball patrol)', region: 'out', walk: [[q[0], q[1]], [q[0] - 6, q[1] - 2], [q[0] - 5, q[1] + 3.5], [q[0] + 2, q[1] + 3.6], [q[0] + 4, q[1] - 4], [-30, -45], [-24, -50], [-28, -45]], talk: () => this.talkCandy() }); this.candy.carry = true;
-    // Drive Dillers Indoor Center cameos (Snowie as cute Tournament Director, Courts Manager Lola + Candy watching the courts, plus Luna, Torty & Pi-rat!)
+    // Drive Dillers Indoor Center cameos
     if (dillersOwned() && SP.snowieDillers) {
       this.snowieDill = this.npc('snowie', { at: SP.snowieDillers, y: 0.56, yaw: -PI / 2, s: 1.32, label: '🐁 Director Snowie (Indoor Tournament)', region: 'in_dillers', talk: () => this.talkSnowieDill() });
-      // Dress Snowie up with a super cute pink Tournament Director visor + golden bow + mini Drive Diller paddle!
       const sVisor = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.21, 0.05, 16, 1, false, -PI * 0.6, PI * 1.2), new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.35 }));
       sVisor.position.set(0, 0.56, 0.06); this.snowieDill.root.add(sVisor);
       const sBow = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 1), new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 }));
@@ -98,23 +97,41 @@ export class Game {
       const sPad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.025), new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.35 }));
       sPad.position.set(0.24, 0.36, 0.14); sPad.rotation.set(0.2, 0, -0.35); this.snowieDill.root.add(sPad);
 
-      // Courts Manager Lola & Candy right at the indoor courts entrance watching the courts!
       this.lola = this.humanNpc({ skin: 1, hair: 1, hairC: 0, shirt: 2, pants: 3 }, { at: SP.lolaDillers, y: 0.08, yaw: PI / 2, label: '👩‍⚖️ Courts Manager Lola', region: 'in_dillers', talk: () => this.talkLola() });
       this.candyDill = this.npc('candy', { at: SP.candyDillers, y: 0.08, yaw: PI / 2, s: 1.15, label: '🐶 Candy (Indoor Ball Inspector)', region: 'in_dillers', talk: () => this.talkCandyDill() });
       this.candyDill.carry = true;
-      // Add a visible 3D ball in Candy's mouth so when she steals your outdoor ball you see it in her jaws!
       this.candyStolenBall = new THREE.Mesh(new THREE.SphereGeometry(0.085, 16, 12), new THREE.MeshStandardMaterial({ color: 0xe6ff3b, roughness: 0.35, emissive: 0x3a4a00, emissiveIntensity: 0.35 }));
       this.candyStolenBall.position.set(0, 0.44, 0.38); this.candyDill.root.add(this.candyStolenBall);
 
-      // Luna, Torty & Pi-rat cameos inside Drive Dillers
       this.lunaDill = this.npc('luna', { at: SP.lunaDillers, y: 0.08, yaw: 0, s: 1.22, label: '🐭 Luna (Silent Serve Foam Lab)', region: 'in_dillers', talk: () => this.talkLunaDill() });
       this.tortyDill = this.npc('torty', { at: SP.tortyDillers, y: 0.08, yaw: PI / 2, s: 1.12, label: '🐢 Torty (Drive Diller Pro Gear)', region: 'in_dillers', talk: () => this.talkTortyDill() });
       this.piratDill = this.npc('pirat', { at: SP.piratDillers, y: 1.92, yaw: PI / 2, s: 1.22, label: '🏴‍☠️ Umpire Pi-rat (Center Stage)', region: 'in_dillers', talk: () => talk(LINES.piratDill) });
     }
+    // Super Smash Arena cameos (all 5 family pets: Luna, Snowie, Torty, Candy, Pi-rat!)
+    if (smashOwned() && SP.lunaSmash) {
+      this.lunaSmash = this.npc('luna', { at: SP.lunaSmash, y: 1.14, yaw: -PI / 2, s: 1.28, label: '🐭 Luna (Chief Smash Engineer)', region: 'out', talk: () => this.talkLunaSmash() });
+      // Add glowing orange Super Smash goggles + mini Rocket Blaster paddle on Luna!
+      const lVisor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 0.08), new THREE.MeshStandardMaterial({ color: 0xff5a1f, emissive: 0xff5a1f, emissiveIntensity: 0.35, roughness: 0.3 }));
+      lVisor.position.set(0, 0.54, 0.14); this.lunaSmash.root.add(lVisor);
+      const lPad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.025), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.35 }));
+      lPad.position.set(0.24, 0.36, 0.14); lPad.rotation.set(0.2, 0, -0.35); this.lunaSmash.root.add(lPad);
+
+      this.snowieSmash = this.npc('snowie', { at: SP.snowieSmash, y: 1.14, yaw: -PI / 2, s: 1.26, label: '🐁 Snowie (Smash Cup Host)', region: 'out', talk: () => this.talkSnowieSmash() });
+      const snCrown = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.4, roughness: 0.3 }));
+      snCrown.position.set(0, 0.66, 0.04); this.snowieSmash.root.add(snCrown);
+
+      this.tortySmash = this.npc('torty', { at: SP.tortySmash, y: 1.10, yaw: PI, s: 1.18, label: '🐢 Torty (MaxGrit Repair Forge)', region: 'out', talk: () => this.talkTortySmash() });
+      this.candySmash = this.npc('candy', { at: SP.candySmash, y: 0.08, yaw: -PI / 2, s: 1.12, label: '🐶 Candy (Smash Ball Hound)', region: 'out', talk: () => this.talkCandySmash() });
+      this.candySmash.carry = true;
+      const cBall = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), new THREE.MeshStandardMaterial({ color: 0xff6b2b, roughness: 0.35, emissive: 0xff4500, emissiveIntensity: 0.45 }));
+      cBall.position.set(0, 0.44, 0.38); this.candySmash.root.add(cBall);
+
+      this.piratSmash = this.npc('pirat', { at: SP.piratSmash, y: 1.92, yaw: PI / 2, s: 1.25, label: '🏴‍☠️ Umpire Pi-rat (Candy Stadium)', region: 'out', talk: () => talk(LINES.piratSmash) });
+    }
   }
-  petBusy(id, busy) { for (const k of [id, id + 'Dill']) { const p = this[k]; if (p) { p.busy = busy; p.root.visible = !busy; } } }
-  talkTorty() { const first = !S.talks.torty; S.talks.torty = 1; persist(); talk(first ? LINES.torty0 : LINES.torty, null, [{ t: '🏓 Shop paddles', f: () => this.app.ui.shop('paddle') }, { t: '🟡 Shop balls', f: () => this.app.ui.shop('ball') }, { t: '🧢 Gear', f: () => this.app.ui.shop('gear') }, { t: 'Just looking!', f: () => {} }]); }
-  talkLuna() { const first = !S.talks.luna; S.talks.luna = 1; persist(); talk(first ? LINES.luna0 : LINES.luna, null, [{ t: '🎯 Pick a drill', f: () => this.app.ui.drills('train') }, { t: 'Later, Coach!', f: () => {} }]); }
+  petBusy(id, busy) { for (const k of [id, id + 'Dill', id + 'Smash']) { const p = this[k]; if (p) { p.busy = busy; p.root.visible = !busy; } } }
+  talkTorty() { const first = !S.talks.torty; S.talks.torty = 1; persist(); talk(first ? LINES.torty0 : LINES.torty, null, [{ t: '🛠️ Re-Grit & Paddle Repair (' + Math.round(S.padCond ?? 100) + '%)', f: () => this.app.ui.smashForge() }, { t: '🏓 Shop paddles', f: () => this.app.ui.shop('paddle') }, { t: '🟡 Shop balls', f: () => this.app.ui.shop('ball') }, { t: '🧢 Gear', f: () => this.app.ui.shop('gear') }, { t: 'Just looking!', f: () => {} }]); }
+  talkLuna() { const first = !S.talks.luna; S.talks.luna = 1; persist(); talk(first ? LINES.luna0 : LINES.luna, null, [{ t: '🎯 Pick a drill', f: () => this.app.ui.drills('train') }, { t: '💥 Super Smash Hub', f: () => this.app.ui.smashHub() }, { t: 'Later, Coach!', f: () => {} }]); }
   talkSnowie() { talk(LINES.snowie, null, [{ t: '🌭 Order a snack', f: () => this.app.ui.snacks() }, { t: 'Just saying hi!', f: () => {} }]); }
   talkCandy() { talk(LINES.candy, () => { sfx('bark'); S.badges.candy = 1; persist(); }); }
   talkSnowieDill() { S.talks.snowieDill = 1; persist(); talk(LINES.snowieDill, null, [{ t: '🏟️ Enter Drive Dillers Tournament', f: () => this.app.ui.dillersTourney() }, { t: '🟠 Indoor Ball Bar (Free Balls)', f: () => this.app.ui.dillersBallBar() }, { t: '🏓 Shop Drive Diller Gear', f: () => this.app.ui.shop('paddle', 'diller') }, { t: 'Squeak on, Snowie!', f: () => {} }]); }
@@ -122,6 +139,20 @@ export class Game {
   talkCandyDill() { sfx('bark'); S.badges.candy = 1; persist(); talk(LINES.candyDill, null, [{ t: '🧽 Show Candy a Silent Serve Foam Ball', f: () => this.equipIndoorBall('silent') }, { t: '🟠 Show Candy a 26-Hole Indoor Ball', f: () => this.equipIndoorBall('indoor') }, { t: '🐾 Pet Candy', f: () => toast('🐶 Candy wags her tail happily!') }]); }
   talkLunaDill() { talk(LINES.lunaDill, null, [{ t: '🧽 Grab Silent Serve Foam Ball', f: () => this.equipIndoorBall('silent') }, { t: '🎯 Indoor Drill on Dill Court 1', f: () => this.app.ui.drills('dill1') }, { t: 'Thanks, Luna!', f: () => {} }]); }
   talkTortyDill() { talk(LINES.tortyDill, null, [{ t: '🏓 Drive Diller Pro Paddle', f: () => this.app.ui.shop('paddle', 'diller') }, { t: '🟡 Indoor & Silent Serve Balls', f: () => this.app.ui.dillersBallBar() }, { t: 'Thanks, Torty!', f: () => {} }]); }
+  talkLunaSmash() { S.talks.lunaSmash = 1; persist(); talk(LINES.lunaSmash, null, [{ t: '💥 Open Super Smash Hub & Cup', f: () => this.app.ui.smashHub() }, { t: '🌋 Play on Lava Island Court', f: () => this.app.ui.matchSetup('smash_lava') }, { t: '🚀 Play on Moon Base Court', f: () => this.app.ui.matchSetup('smash_moon') }, { t: '🍭 Play on Candy Stadium Court', f: () => this.app.ui.matchSetup('smash_candy') }, { t: 'Thanks, Luna!', f: () => {} }]); }
+  talkSnowieSmash() { S.talks.snowieSmash = 1; persist(); talk(LINES.snowieSmash, null, [{ t: '🏆 Enter 3-Round Super Smash Cup', f: () => this.app.ui.smashHub() }, { t: '🎁 Claim Free Starter Smash Gear', f: () => this.claimFreeSmashGear() }, { t: '🏓 Power Paddles Shop', f: () => this.app.ui.shop('paddle', 'maxgrit_smash') }, { t: 'Squeak on, Snowie!', f: () => {} }]); }
+  talkTortySmash() { S.talks.tortySmash = 1; persist(); talk(LINES.tortySmash, null, [{ t: '🛠️ MaxGrit Re-Grit & Edge-Guard Forge (' + Math.round(S.padCond ?? 100) + '%)', f: () => this.app.ui.smashForge() }, { t: '🏓 Specialty Power Paddles', f: () => this.app.ui.shop('paddle', 'maxgrit_smash') }, { t: 'Thanks, Torty!', f: () => {} }]); }
+  talkCandySmash() { sfx('bark'); S.badges.candy = 1; persist(); talk(LINES.candySmash, null, [{ t: '🟠 Equip Silent Serve Super Foam Ball', f: () => this.claimFreeSmashGear() }, { t: '🍀 Ask Candy for Lucky Golden Ball (+15 🪙 if broke)', f: () => { if (S.coins < 15) { S.coins += 15; persist(); sfx('win'); toast('🐶🍀 Candy dug up a Lucky Golden Pickleball! +15 🪙!'); } else toast('🐶 Candy wags her tail! You have plenty of coins (' + S.coins + ' 🪙)!'); } }, { t: '🐾 Pet Candy', f: () => toast('🐶 Candy bounces a Super Foam ball for you to SMASH!') }]); }
+  claimFreeSmashGear() {
+    if (!S.own.paddle.includes('rocket')) S.own.paddle.push('rocket');
+    if (!S.own.ball.includes('silent_smash')) S.own.ball.push('silent_smash');
+    S.eq.paddle = 'rocket';
+    S.eq.ball = 'silent_smash';
+    S.padCond = 100;
+    if (S.smash) S.smash.freebies = true;
+    persist(); sfx('buy');
+    toast('🚀 Claimed FREE Rocket Blaster Paddle + Silent Serve Super Foam Ball + 100% MaxGrit Tune-Up!');
+  }
   equipIndoorBall(id) {
     if (!S.own.ball.includes(id)) S.own.ball.push(id);
     if (!S.own.ball.includes('indoor')) S.own.ball.push('indoor');
@@ -134,10 +165,8 @@ export class Game {
   kickOutByLolaAndCandy(ballDef, cfg) {
     sfx('bark'); setTimeout(() => sfx('fault'), 180);
     S.badges.candy = 1; persist();
-    // Place the player right outside the Drive Dillers West Main Entrance facing Lola & Candy!
     this.me.place([46.6, 0.1, 38.0], PI / 2);
     this.cam.yaw = -PI / 2; this.cam.pitch = 0.32; this.cam.snap = true;
-    // Move Lola & Candy right outside the front doors facing you, with your stolen outdoor ball in Candy's jaws!
     if (this.lola && this.candyDill) {
       this.lola.x = 50.1; this.lola.z = 36.9; this.lola.yaw = -PI / 2; this.lola.region = 'out';
       this.candyDill.x = 49.5; this.candyDill.z = 38.8; this.candyDill.yaw = -PI / 2; this.candyDill.region = 'out';
@@ -164,11 +193,12 @@ export class Game {
     const push = (at, r, label, f, ok) => { if (at) this.acts.push({ x: at[0], z: at[1], r, label, f, ok }); };
     for (const id in COURTS) {
       if (COURTS[id].dlc && !dillersOwned()) continue;
+      if (COURTS[id].smashDlc && !smashOwned()) continue;
       const s = SP['court_' + id] || (id === 'center' ? SP.stadium : null);
-      if (s) push(s, 2.6, '🏓 Play on ' + COURTS[id].n, () => ui.matchSetup(id));
+      if (s) push(s, 2.6, (COURTS[id].kind === 'smash' ? '💥 Smash on ' : '🏓 Play on ') + COURTS[id].n, () => ui.matchSetup(id));
     }
     push(SP.stadiumSign, 2.4, '🏆 Stadium Court', () => ui.matchSetup('center'));
-    push(SP.desk, 2.6, '📋 Front desk (Marge)', () => talk(LINES.marge, null, [{ t: '🪜 Park Ladder', f: () => ui.ladder() }, { t: '🏆 Tournaments', f: () => ui.tourneys() }, { t: '📇 My player card', f: () => ui.card() }, { t: 'Thanks!', f: () => {} }]));
+    push(SP.desk, 2.6, '📋 Front desk (Marge)', () => talk(LINES.marge, null, [{ t: '🪜 Park Ladder', f: () => ui.ladder() }, { t: '🏆 Tournaments', f: () => ui.tourneys() }, { t: '💥 Super Smash Cup', f: () => ui.smashHub() }, { t: '📇 My player card', f: () => ui.card() }, { t: 'Thanks!', f: () => {} }]));
     push(SP.ladder, 2.2, '🪜 Park Ladder board', () => ui.ladder()); push(SP.tourney, 2.2, '🏆 Tournament board', () => ui.tourneys());
     push(SP.counter, 2.2, '🛒 Checkout counter', () => this.talkTorty()); push(SP.maxgrit, 2.2, '✨ MaxGrit display', () => ui.shop('paddle', 'maxgrit'));
     push(SP.demo, 2.0, '🎯 Test swing (serve targets)', () => ui.startDrill('serve', 'train'));
@@ -187,6 +217,15 @@ export class Game {
     } else if (SP.dillersGate) {
       push(SP.dillersGate, 3.0, '🔒 Drive Dillers DLC (75 🎟️ in Arcade)', () => toast('🏟️ Unlock Drive Dillers Expansion (75 tickets) in the Grok Arcade DLC Machine!'));
     }
+    // Super Smash Arena interactions
+    if (smashOwned()) {
+      push(SP.smashDesk, 2.6, '💥 Super Smash Hub & Smash Cup', () => ui.smashHub());
+      push(SP.smashBracket, 2.5, '🏆 Super Smash Cup Bracket', () => ui.smashHub());
+      push(SP.smashForge, 2.6, '🛠️ Torty\'s MaxGrit Re-Grit & Repair Forge', () => ui.smashForge());
+      push(SP.smashPaddles, 2.5, '🏓 Specialty Power Paddles Rack', () => ui.shop('paddle', 'maxgrit_smash'));
+    } else if (SP.smashGate) {
+      push(SP.smashGate, 3.0, '🔒 Super Smash DLC (75 🎟️ in Arcade)', () => toast('💥 Unlock Super Smash Expansion (75 tickets) in the Grok Arcade DLC Machine!'));
+    }
     if (this.marge) this.acts.push({ x: this.marge.x, z: this.marge.z + 2.4, r: 0.1, label: '', f: () => {} }); }
   buyPop() { if (S.coins < 3) { toast('🪙 Pickle Pops cost 3 coins'); sfx('deny'); return; } S.coins -= 3; S.snacks = (S.snacks || 0) + 1; S.buff = 'pop'; persist(); sfx('buy'); toast('🍭 Pickle Pop! +10% hustle next match'); }
   // ---------------- visibility, fades ----------------
@@ -197,7 +236,7 @@ export class Game {
     for (const B of BUILDINGS) { const inIt = B === b || B === mvB; (RM['roof_' + B.id] || []).forEach((m) => m.visible = !inIt || this.fp);
       const d = Math.max(0, B.x0 - me.x, me.x - B.x1, B.z0 - me.z, me.z - B.z1); const show = inIt || (d < 26 && !this.fp) || (this.fp && d < 6); (RM['in_' + B.id] || []).forEach((m) => m.visible = show); }
     for (const p of this.npcs) p.root.visible = !p.busy && (!p.region || p.region === 'out' || (RM[p.region] && RM[p.region][0] ? RM[p.region][0].visible : true)); }
-  areaName() { const me = this.me; if (me.x > 34 && me.z > 24 && me.z < 76) return '🏟️ Drive Dillers Avenue'; if (me.z > 100) return '🎟️ Park Entrance'; if (me.z > 42) return '⛲ Pickle Fountain Plaza'; if (me.z > 14 && Math.abs(me.x) < 30) return '🏟️ Stadium Walk'; if (me.z > -12) return me.x < -30 ? '🏓 West Courts' : me.x > 30 ? '🏓 East Courts' : '🏟️ Stadium Court'; if (me.x < -40) return '🤫 Quiet Practice Court'; if (me.x > 40) return '🌙 Night Lights Court'; return '🌳 North Lawn'; }
+  areaName() { const me = this.me; if (me.x < -54 && me.z > 22 && me.z < 80) return '💥 Super Smash Arena'; if (me.x > 34 && me.z > 24 && me.z < 76) return '🏟️ Drive Dillers Avenue'; if (me.z > 100) return '🎟️ Park Entrance'; if (me.z > 42) return '⛲ Pickle Fountain Plaza'; if (me.z > 14 && Math.abs(me.x) < 30) return '🏟️ Stadium Walk'; if (me.z > -12) return me.x < -30 ? '🏓 West Courts' : me.x > 30 ? '🏓 East Courts' : '🏟️ Stadium Court'; if (me.x < -40) return '🤫 Quiet Practice Court'; if (me.x > 40) return '🌙 Night Lights Court'; return '🌳 North Lawn'; }
   musicFor(b) { if (this.mv) return; playMusic(b ? (b.id === 'snack' ? 'kitchen' : b.id === 'shop' ? 'toyroom' : b.id === 'train' || b.id === 'dillers' ? 'garage' : 'living') : 'garden'); }
   fades() { const b = this.inB, c = E.camera.position, me = this.me; _v.set(me.x, me.y + 1.2, me.z).sub(c); const L = _v.length(); _r.set(c, _v.normalize());
     for (const B of BUILDINGS) for (const f of B.fades) { let hide = false; if (B === b && !this.fp && !this.mv) { _b.copy(f.box).expandByScalar(0.05); const p = _r.intersectBox(_b, _s); hide = !!p && c.distanceTo(p) < L - 0.3; } if (hide) { f._h = true; f.meshes.forEach((m) => m.visible = false); } else if (f._h) { f._h = false; f.meshes.forEach((m) => m.visible = true); } } }
@@ -216,7 +255,7 @@ export class Game {
       }
     }
     const A = this.amb.find((a) => a.id === cfg.court); if (A) { A.hidden = true; A.figs.forEach((f) => f.vis = false); } this.hiddenAmb = A;
-    this.mv = new MatchView(this, cfg); this.me.setVisible(false); this.setVis(true); this.app.hud.region('🏓 ' + COURTS[cfg.court].n);
+    this.mv = new MatchView(this, cfg); this.me.setVisible(false); this.setVis(true); this.app.hud.region((C.kind === 'smash' || cfg.smashMode ? '💥 ' : '🏓 ') + COURTS[cfg.court].n);
   }
   endMatch() { const mv = this.mv; if (!mv) return; mv.dispose(); this.mv = null; if (this.hiddenAmb) { this.hiddenAmb.hidden = false; this.hiddenAmb = null; } this.me.setVisible(!this.fp); const s = mv.exitSpot; if (s) { this.me.place([s[0], 0.1, s[1]], 0); this.cam.yaw = PI; } this.cam.snap = true; E.camera.fov = E.baseFov; E.camera.updateProjectionMatrix(); this.setVis(true); this.musicFor(this.inB); }
   // ---------------- per-frame ----------------

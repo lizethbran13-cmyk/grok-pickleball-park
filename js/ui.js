@@ -5,23 +5,23 @@ import { sfx, setSound } from './audio.js?v=ppk2';
 import { panel, closePanel, on, toast } from './uikit.js?v=ppk2';
 import { SKINS, HAIRS, HAIR_COLS, SHIRTS, PANTS, cleanLook } from './humans.js?v=ppk2';
 import { goal } from './story.js?v=ppk2';
-import { PADDLES, BALLS, HATS, SHOES, RANKS, rankOf, LADDER, NAMES, TOURNEYS, DILLERS_ROUNDS, DRILLS, COURTS, PARTNERS } from './data.js?v=ppk2';
+import { PADDLES, BALLS, HATS, SHOES, RANKS, rankOf, LADDER, NAMES, TOURNEYS, DILLERS_ROUNDS, SMASHERS, SMASH_CUP_ROUNDS, DRILLS, COURTS, PARTNERS } from './data.js?v=ppk2';
 import { SPOTS } from './map.js?v=ppk2';
-import { dillersOwned } from './dlc.js?v=ppk2';
+import { dillersOwned, smashOwned } from './dlc.js?v=ppk2';
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const R = () => Math.random(), pick = (a) => a[(R() * a.length) | 0];
 const rndLook = () => ({ skin: (R() * 6) | 0, hair: (R() * 6) | 0, hairC: (R() * 6) | 0, shirt: (R() * 8) | 0, pants: (R() * 6) | 0 });
 const DIFFS = [['easy', '🙂 Easy'], ['medium', '😎 Medium'], ['hard', '🔥 Hard'], ['pro', '👑 Pro']];
 const bar = (v, c) => `<span class="sbar"><i style="width:${Math.round(v * 100)}%;background:${c}"></i></span>`;
 export class UI {
-  constructor(app) { this.app = app; this.setup = { diff: 'easy', doubles: false, to: S.opts.to || 11, partner: S.partner || 'kai' }; }
+  constructor(app) { this.app = app; this.setup = { diff: 'easy', doubles: false, to: S.opts.to || 11, partner: S.partner || 'kai', smashMode: false }; }
   get g() { return this.app.game; }
   open() { this.app.busy = true; }
   back() { this.app.resume(); }
   // ---------------- title / look / options / how ----------------
   title() { const app = this.app; const ui = $('ui'); ui.classList.add('open'); app.preview = false; ui.innerHTML = `<div class="title">
       <div class="logo"><span class="l0">GROK</span><span class="l1">PICKLEBALL</span><span class="l2">PARK</span></div>
-      <p class="tag">A giant sports park full of courts, players and pets. Real pickleball rules, a Pro Shop with the MaxGrit paddle, drills with Luna, the Park Ladder, tournaments${dillersOwned() ? ', Drive Dillers Indoor Center with Director Snowie, Lola & Candy' : ''}... and the Night Lights Court.</p>
+      <p class="tag">A giant sports park full of courts, players and pets. Real pickleball rules, a Pro Shop with the MaxGrit paddle, drills with Luna, the Park Ladder, tournaments${dillersOwned() ? ', Drive Dillers Indoor Center with Director Snowie, Lola & Candy' : ''}${smashOwned() ? ', the Super Smash Expansion (Lava Island, Moon Base & Candy Stadium + 6 Super Smashers + Torty\'s MaxGrit Repair Forge)' : ''}... and the Night Lights Court.</p>
       <div class="tBtns"><button class="go" id="tPlay">▶ ${S.made ? 'BACK TO THE PARK' : 'ENTER THE PARK'}</button><button class="mbtn2" id="tLook">👤 YOUR LOOK</button><button class="mbtn2" id="tOpts">⚙️ OPTIONS</button></div>
       <p class="foot">A Grok game · Torty, Luna, Pi-rat, Snowie & Candy</p></div>`;
     on(ui, '#tPlay', () => { if (!S.made) return this.custom(() => app.play(), true); app.play(); }); on(ui, '#tLook', () => this.custom(() => this.title())); on(ui, '#tOpts', () => this.options(() => this.title())); }
@@ -46,7 +46,7 @@ export class UI {
   how(done) { panel(`<h2>🏓 WELCOME TO THE PARK!</h2><div class="how"><p>🕹️ Left thumb: walk. Drag anywhere else to look. 👁️ switches first / third person.</p><p>🏟️ Walk onto any court's yellow spot and tap the button to play.</p>
       <p>📏 <b>Real rules:</b> serve underhand and diagonal. The serve must bounce, and the return must bounce (two-bounce rule). No volleys in the 7-foot kitchen. Only the serving side scores, to 11, win by 2.</p>
       <p>👉 In a match: tap = hit, swipe up = soft/drive (longer = harder), swipe way up = lob, swipe down = smash. Sideways aims. Or tap the shot buttons. 🌀 adds MaxGrit spin.</p>
-      <p>🛒 Torty's Pro Shop, 🏛️ Clubhouse (ladder + tournaments), 🎯 Training Center, 🌭 Snack Shack, 🌙 Night Lights Court, 🤫 the Quiet Court${dillersOwned() ? ' and 🏟️ Drive Dillers Indoor Center (Indoor & Silent Serve balls only!)' : ''} are all walk-in.</p></div><button class="go" id="hOk">LET'S PLAY!</button>`, (c) => on(c, '#hOk', () => { S.seenHow = true; persist(); done(); })); }
+      <p>🛒 Torty's Pro Shop, 🏛️ Clubhouse (ladder + tournaments), 🎯 Training Center, 🌭 Snack Shack, 🌙 Night Lights Court, 🤫 the Quiet Court${dillersOwned() ? ' and 🏟️ Drive Dillers Indoor Center (Indoor & Silent Serve balls only!)' : ''} ${smashOwned() ? ', and 💥 Super Smash Arena (west avenue — 2pt smashes, 3pt Super Smashes & Torty\'s MaxGrit Repair Forge)' : ''} are all walk-in.</p></div><button class="go" id="hOk">LET'S PLAY!</button>`, (c) => on(c, '#hOk', () => { S.seenHow = true; persist(); done(); })); }
   // ---------------- journal / pause ----------------
   pause(inMatch) { const app = this.app; app.busy = true; app.paused = true; const mv = this.g.mv;
     if (mv) { panel(`<h2>⏸ ${mv.drill ? 'DRILL' : 'MATCH'} PAUSED</h2><p class="sub">${esc(COURTS[mv.cid].n)}</p>
@@ -58,13 +58,13 @@ export class UI {
         on(c, '#pV', () => { mv.toggleFP(); app.resume(); }); on(c, '#pO', () => this.options(() => this.pause(true)));
         on(c, '#pQ', () => { if (S.tourRun && mv.cfg.mode === 'tourney') { S.tourRun = null; persist(); toast('🏳️ You withdrew from the tournament'); } this.g.endMatch(); app.resume(); }); }); return; }
     panel(`<h2>📒 PARK JOURNAL</h2><p class="sub">⭐ ${esc(goal())}</p>${this.cardHtml()}
-      <div class="btnRow"><button class="go" id="pR">▶ RESUME</button></div><div class="btnRow"><button class="mbtn2 sm" id="pM">🗺️ Map</button><button class="mbtn2 sm" id="pD">🎯 Drills</button><button class="mbtn2 sm" id="pB">🎒 Bag</button>${dillersOwned() ? '<button class="mbtn2 sm" id="pDD">🏟️ Drive Dillers</button>' : ''}</div>
+      <div class="btnRow"><button class="go" id="pR">▶ RESUME</button></div><div class="btnRow"><button class="mbtn2 sm" id="pM">🗺️ Map</button><button class="mbtn2 sm" id="pD">🎯 Drills</button><button class="mbtn2 sm" id="pB">🎒 Bag</button>${dillersOwned() ? '<button class="mbtn2 sm" id="pDD">🏟️ Drive Dillers</button>' : ''}${smashOwned() ? '<button class="mbtn2 sm" id="pSM">💥 Super Smash</button><button class="mbtn2 sm" id="pFG">🛠️ Repair Forge</button>' : ''}</div>
       <div class="btnRow"><button class="mbtn2 sm" id="pL">👤 Look</button><button class="mbtn2 sm" id="pO">⚙️ Options</button><button class="mbtn2 sm" id="pH">❓ Rules</button><button class="mbtn2 sm" id="pT">🏠 Title</button></div>`, (c) => {
-      on(c, '#pR', () => app.resume()); on(c, '#pM', () => this.map()); on(c, '#pD', () => this.drills('train', true)); on(c, '#pB', () => this.bag()); on(c, '#pDD', () => this.dillersTourney()); on(c, '#pL', () => this.custom(() => this.pause())); on(c, '#pO', () => this.options(() => this.pause())); on(c, '#pH', () => this.how(() => this.pause())); on(c, '#pT', () => app.toTitle()); }); }
+      on(c, '#pR', () => app.resume()); on(c, '#pM', () => this.map()); on(c, '#pD', () => this.drills('train', true)); on(c, '#pB', () => this.bag()); on(c, '#pDD', () => this.dillersTourney()); on(c, '#pSM', () => this.smashHub()); on(c, '#pFG', () => this.smashForge()); on(c, '#pL', () => this.custom(() => this.pause())); on(c, '#pO', () => this.options(() => this.pause())); on(c, '#pH', () => this.how(() => this.pause())); on(c, '#pT', () => app.toTitle()); }); }
   cardHtml() { const st = S.stats, rk = rankOf(S.rating), pd = PADDLES.find((p) => p.id === S.eq.paddle) || PADDLES[0], bl = BALLS.find((b) => b.id === S.eq.ball) || BALLS[0];
-    const badges = [['candy', '🐶 Met Candy'], ['firstwin', '🏓 First Win'], ['ladder', '🪜 Ladder Climber'], ['king', '👑 Beat the King'], ['drill', '🎯 Drill Star'], ['spin', '🌀 Spin Doctor'], ['dillchamp', '🏟️ Drive Dillers Champ']];
+    const badges = [['candy', '🐶 Met Candy'], ['firstwin', '🏓 First Win'], ['ladder', '🪜 Ladder Climber'], ['king', '👑 Beat the King'], ['drill', '🎯 Drill Star'], ['spin', '🌀 Spin Doctor'], ['dillchamp', '🏟️ Drive Dillers Champ'], ['smashchamp', '💥 Super Smash Champ']];
     return `<div class="pcard"><div class="pcTop"><b>${esc(S.name || 'Player')}</b><span>${rk.n}</span></div><div class="statGrid"><div><b>${S.rating.toFixed(1)}</b><small>⭐ Rating</small></div><div><b>${S.coins}</b><small>🪙 Coins</small></div><div><b>${S.ladder >= 1 ? '#' + (S.ladder + 1 > 10 ? '—' : S.ladder + 1) : '👑 #1'}</b><small>🪜 Ladder</small></div><div><b>${st.wins}-${st.losses}</b><small>🏓 Record</small></div></div>
-      <p class="sub">🏓 ${esc(pd.n)} · 🎾 ${esc(bl.n)} · 🏆 ${TOURNEYS.filter((t) => S.tour[t.id]).map((t) => t.icon).join(' ') || (S.dillers && S.dillers.wins ? '🏟️' : 'no trophies yet')}</p>
+      <p class="sub">🏓 ${esc(pd.n)} (${Math.round(S.padCond == null ? 100 : S.padCond)}% grit) · 🎾 ${esc(bl.n)} · 🏆 ${TOURNEYS.filter((t) => S.tour[t.id]).map((t) => t.icon).join(' ') || (S.dillers && S.dillers.wins ? '🏟️' : 'no trophies yet')}</p>
       <p class="sub">${badges.map(([k, n]) => `<span class="badge ${S.badges[k] ? 'on' : ''}">${n}</span>`).join(' ')}</p></div>`; }
   card() { this.open(); panel(`<h2>📇 MY PLAYER CARD</h2>${this.cardHtml()}<p class="sub">Ranks: ${RANKS.map((r) => r.r.toFixed(1) + ' ' + r.n).join(' · ')}</p><button class="go" id="b">CLOSE</button>`, (c) => on(c, '#b', () => this.back())); }
   bag() { this.open(); const row = (cat, list) => list.filter((x) => S.own[cat].includes(x.id)).map((x) => `<button class="hat ${S.eq[cat] === x.id ? 'on' : ''}" data-c="${cat}" data-i="${x.id}">${esc(x.n)}</button>`).join('');
@@ -72,6 +72,7 @@ export class UI {
       c.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => { sfx('click'); S.eq[b.dataset.c] = b.dataset.i; persist(); this.g.refreshMe(); this.bag(); }); on(c, '#b', () => this.back()); }); }
   map() { this.open(); const P = [['🎟️ Park Entrance', 0, 108, Math.PI], ['⛲ Fountain Plaza', 0, 72, Math.PI], ['🏟️ Stadium Court', 0, 9, Math.PI], ['🏓 West Courts', -54, 16, Math.PI], ['🏓 East Courts', 54, 16, Math.PI], ['🏛️ Clubhouse', -14, 57, -Math.PI / 2], ['🛒 Torty\'s Pro Shop', 14, 57, Math.PI / 2], ['🌭 Snack Shack', -24, 99, Math.PI], ['🎯 Training Center', 12, 94, Math.PI / 2], ['🌙 Night Lights Court', 54, -34, Math.PI], ['🤫 Quiet Court', -54, -34, Math.PI], ['🐶 Candy\'s Dog Run', 0, -60, Math.PI]];
     if (dillersOwned()) P.splice(3, 0, ['🏟️ Drive Dillers Indoor', 48, 38, Math.PI / 2]);
+    if (smashOwned()) P.splice(4, 0, ['💥 Super Smash Arena', -63.5, 50.0, Math.PI], ['🌋 Lava Island Court', -72, 48, Math.PI], ['🚀 Moon Base Court', -90, 48, Math.PI], ['🍭 Candy Stadium', -81, 74, Math.PI]);
     panel(`<h2>🗺️ PARK MAP</h2><p class="sub">Tap to fast-travel.</p><div class="hats">${P.map((p, i) => `<button class="hat" data-i="${i}">${p[0]}</button>`).join('')}</div><button class="mbtn2" id="b">CLOSE</button>`, (c) => {
       c.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sfx('whoosh'); const p = P[+b.dataset.i]; this.g.tp(p[1], p[2], p[3]); this.back(); }); on(c, '#b', () => this.back()); }); }
   // ---------------- Torty's Pro Shop ----------------
@@ -82,9 +83,10 @@ export class UI {
       return `<div class="shopIt ${focus === x.id ? 'focus' : ''} ${x.star ? 'star' : ''}">${vis}<div class="si"><b>${esc(x.n)}</b>${x.by ? `<small>${esc(x.by)}</small>` : ''}<p>${esc(x.d || '')}</p>${stats}</div>
         <button class="buy ${eq ? 'eq' : own ? 'own' : ''}" data-id="${x.id}" data-c="${c}">${eq ? '✔ USING' : own ? 'USE' : '🪙 ' + x.price}</button></div>`; };
     panel(`<h2>🛒 TORTY'S PRO SHOP</h2><p class="sub">🐢 "Slow and steady wins the rally!" · You have <b>🪙 ${S.coins}</b></p>
-      <div class="seg"><button data-t="paddle" class="${cat === 'paddle' ? 'on' : ''}">🏓 Paddles</button><button data-t="ball" class="${cat === 'ball' ? 'on' : ''}">🎾 Balls</button><button data-t="gear" class="${cat === 'gear' ? 'on' : ''}">🧢 Gear</button></div>
+      <div class="seg"><button data-t="paddle" class="${cat === 'paddle' ? 'on' : ''}">🏓 Paddles</button><button data-t="ball" class="${cat === 'ball' ? 'on' : ''}">🎾 Balls</button><button data-t="gear" class="${cat === 'gear' ? 'on' : ''}">🧢 Gear</button>${smashOwned() ? '<button id="goForge">🛠️ Grit Forge (' + Math.round(S.padCond == null ? 100 : S.padCond) + '%)</button>' : ''}</div>
       <div class="shopList">${lists[cat].map(item).join('')}</div><button class="go" id="b">THANKS, TORTY!</button>`, (c) => {
       c.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { sfx('click'); this.shop(b.dataset.t); });
+      on(c, '#goForge', () => this.smashForge());
       c.querySelectorAll('.buy').forEach((b) => b.onclick = () => { const id = b.dataset.id, k = b.dataset.c, x = [...PADDLES, ...BALLS, ...HATS, ...SHOES].find((q) => q.id === id && (k !== 'hat' || HATS.includes(q)) && (k !== 'shoe' || SHOES.includes(q)));
         if (!S.own[k].includes(id)) { if (S.coins < x.price) { sfx('deny'); toast('🪙 Need ' + (x.price - S.coins) + ' more coins. Win matches or do drills!'); return; } S.coins -= x.price; S.own[k].push(id); sfx('buy'); toast('🐢 Torty: "Great pick! The ' + x.n + ' is yours."'); if (id === 'maxgrit') S.badges.spin = 1; }
         else sfx('click'); S.eq[k] = id; persist(); this.g.refreshMe(); this.shop(cat, id); });
@@ -234,29 +236,225 @@ export class UI {
       ump: rd.court === 'dill3',
     });
   }
+
+  // ---------------- Super Smash Expansion (DLC #84): Hub, Cup & Torty's MaxGrit Repair Forge ----------------
+  ensureSmashStarterGear() {
+    if (!S.smash) S.smash = { wins: 0, run: null, smasher: 'rita', oppSmasher: 'bo', doubles: false, freebies: false };
+    if (!S.own.paddle.includes('rocket')) S.own.paddle.push('rocket');
+    if (!S.own.ball.includes('silent_smash')) S.own.ball.push('silent_smash');
+    persist();
+  }
+  smasherPickerHtml(sel) {
+    const cur = SMASHERS.find((s) => s.id === sel) || SMASHERS[0];
+    return `<div class="smChars" id="smChars">${SMASHERS.map((s) => `<button type="button" data-sm="${s.id}" class="${s.id === cur.id ? 'on' : ''}" style="--c:${s.col}"><i>${s.icon}</i><b>${esc(s.n)}</b><small>${esc(s.sn)}</small></button>`).join('')}</div><p class="smDesc" id="smDesc">${cur.icon} <b>${esc(cur.sn)}:</b> ${esc(cur.desc)}</p>`;
+  }
+  smashHub() {
+    this.open(); this.ensureSmashStarterGear();
+    const sm = S.smash;
+    const sel = sm.smasher || 'rita';
+    const run = sm.run || { round: 0 };
+    const curRound = Math.min(2, run.round || 0);
+    const rd = SMASH_CUP_ROUNDS[curRound];
+    const cond = Math.round(S.padCond == null ? 100 : S.padCond);
+    const condCol = cond <= 25 ? '#ef4444' : cond <= 55 ? '#facc15' : '#4ade80';
+    panel(`<h2>💥 SUPER SMASH EXPANSION HUB</h2>
+      <p class="sub">🐭 <b>Smash Coach Luna & 🐁 Director Snowie:</b> "Pop-ups fly high! Overhead Smash winners = <b>2 pts</b>, Super Smash winners = <b>3 pts</b>! Fill your Super Bar to 100% and press <b>⚡ SUPER</b>!" · Cup Titles: <b>🏆 ${sm.wins || 0}</b></p>
+      <div class="gritBar">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:900">
+          <span>🏓 Paddle Grit & Edge Guard: <b style="color:${condCol}">${cond}%</b>${cond <= 30 ? ' ⚠️ WORN (Spin/Power reduced!)' : ' ✨ CRISP'}</span>
+          <button class="buy" id="openForge" style="min-height:32px;padding:4px 10px;font-size:12px">🛠️ ${cond <= 25 || S.coins < 15 ? 'FREE REBUILD!' : 'Repair Forge'}</button>
+        </div>
+        <div class="gritTrack"><i style="width:${cond}%;background:${condCol}"></i></div>
+      </div>
+      <h3>1. PICK YOUR SMASHER & SUPER ABILITY</h3>
+      ${this.smasherPickerHtml(sel)}
+      <h3>2. SUPER SMASH CUP (3-ARENA PROGRESSIVE BRACKET · 🪙 300 PRIZE)</h3>
+      <div class="ladder">${SMASH_CUP_ROUNDS.map((r, i) => {
+        const C = COURTS[r.court], sp = SMASHERS.find((s) => s.id === r.smasher) || SMASHERS[0];
+        const done = i < curRound, cur = i === curRound;
+        return `<div class="lr ${done ? 'beat' : cur ? 'next' : ''}">
+          <span class="rk">${['🌋','🚀','🍭'][i] || '💥'} R${i + 1}</span>
+          <b>${esc(C.n)} — vs ${sp.icon} ${esc(sm.doubles ? r.opp.n + ' & ' + r.opp2.n : r.opp.n)}</b>
+          <small>${r.diff.toUpperCase()} · to ${r.to} · ${done ? 'WON ✔' : cur ? 'UP NEXT' : 'LOCKED'}</small>
+        </div>`;
+      }).join('')}</div>
+      <div class="seg">
+        <button data-sf="0" class="${!sm.doubles ? 'on' : ''}">🧍 Singles (1v1)</button>
+        <button data-sf="1" class="${sm.doubles ? 'on' : ''}">👥 Doubles (2v2 w/ ${esc((PARTNERS.find((p) => p.id === S.partner) || PARTNERS[0]).n)})</button>
+      </div>
+      <div class="btnRow">
+        <button class="go" id="goCup">💥 PLAY CUP ROUND ${curRound + 1} (${esc(COURTS[rd.court].n)})</button>
+      </div>
+      <h3>3. QUICK SMASH ON ANY SMASH ARENA</h3>
+      <div class="seg">
+        <button class="hat" data-qc="smash_lava">🌋 Lava Island</button>
+        <button class="hat" data-qc="smash_moon">🚀 Moon Base</button>
+        <button class="hat" data-qc="smash_candy">🍭 Candy Stadium</button>
+      </div>
+      <div class="btnRow">
+        <button class="mbtn2 sm" id="eqStarter">🎁 Equip Rocket Blaster + Silent Super Foam</button>
+        <button class="mbtn2 sm" id="openShop">🏓 Power Paddles Shop</button>
+        ${curRound > 0 ? '<button class="mbtn2 sm danger" id="rstCup">↺ Reset Cup</button>' : ''}
+        <button class="mbtn2 sm" id="b">CLOSE</button>
+      </div>`, (c) => {
+      c.querySelectorAll('[data-sm]').forEach((b) => b.onclick = () => {
+        sfx('click'); sm.smasher = b.dataset.sm; persist(); this.smashHub();
+      });
+      c.querySelectorAll('[data-sf]').forEach((b) => b.onclick = () => {
+        sfx('click'); sm.doubles = b.dataset.sf === '1'; persist(); this.smashHub();
+      });
+      on(c, '#openForge', () => this.smashForge());
+      on(c, '#openShop', () => this.shop('paddle', 'maxgrit_smash'));
+      on(c, '#eqStarter', () => {
+        this.ensureSmashStarterGear();
+        S.eq.paddle = 'rocket'; S.eq.ball = 'silent_smash'; persist(); this.g.refreshMe();
+        sfx('buy'); toast('🚀 Equipped Rocket Blaster Paddle & Silent Serve Super Foam Ball!');
+        this.smashHub();
+      });
+      on(c, '#rstCup', () => { sm.run = null; persist(); toast('↺ Super Smash Cup reset to Round 1'); this.smashHub(); });
+      on(c, '#goCup', () => this.startSmashCupRound(curRound));
+      c.querySelectorAll('[data-qc]').forEach((b) => b.onclick = () => {
+        sfx('click'); this.setup.smashMode = true; this.matchSetup(b.dataset.qc);
+      });
+      on(c, '#b', () => this.back());
+    }, 'shopP');
+  }
+  startSmashCupRound(roundIdx) {
+    this.ensureSmashStarterGear();
+    const sm = S.smash;
+    const rd = SMASH_CUP_ROUNDS[roundIdx] || SMASH_CUP_ROUNDS[0];
+    if (!sm.run) { sm.run = { round: roundIdx }; persist(); }
+    const dbl = !!sm.doubles;
+    const opps = (dbl ? [rd.opp, rd.opp2] : [rd.opp]).map((o, i) => Object.assign({ look: rndLook(), hat: i === 0 ? 'visor' : 'headband', style: { smash: 2.2, drive: 1.3, lob: 0.9, dink: 0.7 } }, o));
+    let partner = null;
+    if (dbl) {
+      let pid = S.partner || 'luna';
+      if (opps.some((o) => o.pet === pid)) pid = 'kai';
+      partner = this.partnerDef(pid);
+    }
+    this.start({
+      court: rd.court,
+      mode: 'smash_cup',
+      smashMode: true,
+      smashRound: roundIdx,
+      smasher: sm.smasher || 'rita',
+      oppSmasher: rd.smasher || 'bo',
+      doubles: dbl,
+      partner,
+      opps,
+      to: rd.to || 15,
+      diff: rd.diff,
+      diffK: DIFFS.findIndex((d) => d[0] === rd.diff),
+      ball: S.eq.ball,
+      title: '💥 ' + rd.stage + ' (' + COURTS[rd.court].n + ')',
+      ump: true,
+    });
+  }
+  smashForge() {
+    this.open(); this.ensureSmashStarterGear();
+    const cond = Math.round(S.padCond == null ? 100 : S.padCond);
+    const pd = PADDLES.find((p) => p.id === S.eq.paddle) || PADDLES[0];
+    const condCol = cond <= 25 ? '#ef4444' : cond <= 55 ? '#facc15' : '#4ade80';
+    const needEmergency = cond <= 25 || S.coins < 15;
+    const repairCost = Math.max(5, Math.min(15, Math.ceil((100 - cond) * 0.2)));
+    panel(`<h2>🛠️ TORTY'S MAXGRIT REPAIR FORGE</h2>
+      <p class="sub">🐢 <b>Master Paddle-Smith Torty & 🐶 Candy:</b> "Over-smashes, Rocket Balls, and net crashes wear down your paddle's MaxGrit surface and crack the edge guard! Below 30% grit, spin & smash power drop by 18%."</p>
+      <div class="gritBar">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:900">
+          <span>🏓 ${esc(pd.n)} Condition</span>
+          <b style="color:${condCol};font-size:20px">${cond}%</b>
+        </div>
+        <div class="gritTrack"><i style="width:${cond}%;background:${condCol}"></i></div>
+        <p class="sub" style="margin:6px 0 0">${cond >= 95 ? '✨ Factory-fresh MaxGrit texture & carbon edge guard! Full 100% power & spin.' : cond <= 25 ? '⚠️ CRITICAL WEAR! Cracked edge guard & smoothed grit — use Tortuga/Ratita Emergency Rebuild below for FREE!' : '🔧 Slight surface wear from heavy smashes. Re-grit anytime to restore 100% crispness.'}</p>
+      </div>
+      <div class="shopList">
+        <div class="shopIt ${cond < 100 && !needEmergency ? 'focus' : ''}">
+          <span class="ic big">🔧</span>
+          <div class="si">
+            <b>Pro MaxGrit Re-Grit & Edge-Guard Weld</b>
+            <small>Restores paddle durability to 100% · +5% bonus Super charge next match</small>
+            <p>Torty buffs fresh diamond-carbon MaxGrit onto your paddle face and seals the edge guard.</p>
+          </div>
+          <button class="buy ${cond >= 100 ? 'eq' : ''}" id="proFix" ${cond >= 100 ? 'disabled' : ''}>${cond >= 100 ? '100% OK' : '🪙 ' + repairCost}</button>
+        </div>
+        <div class="shopIt star">
+          <span class="ic big">🐢🐭</span>
+          <div class="si">
+            <b>Tortuga & Ratita Never-Stuck Emergency Rebuild</b>
+            <small>100% FREE whenever Grit ≤ 25% OR Coins &lt; 15 · Never soft-locked!</small>
+            <p>Torty, Luna & Candy never let a player get stuck with broken gear or 0 coins! Restores 100% grit + gifts a free Silent Serve Super Foam ball.</p>
+          </div>
+          <button class="buy ${needEmergency && cond < 100 ? 'own' : ''}" id="freeFix">${cond >= 100 && S.coins >= 15 ? 'READY IF NEEDED' : 'FREE REBUILD'}</button>
+        </div>
+      </div>
+      <div class="btnRow">
+        <button class="go" id="toHub">💥 Super Smash Hub</button>
+        <button class="mbtn2" id="toShop">🏓 Power Paddles</button>
+        <button class="mbtn2" id="b">DONE</button>
+      </div>`, (c) => {
+      on(c, '#proFix', () => {
+        if (cond >= 100) return;
+        if (S.coins < repairCost) { sfx('deny'); toast('🪙 Low on coins — use the FREE Tortuga & Ratita Emergency Rebuild right below!'); return; }
+        S.coins -= repairCost; S.padCond = 100; S.stats.repairs = (S.stats.repairs || 0) + 1; S.buff = 'pop'; persist();
+        sfx('buy'); toast('🛠️ Torty re-gritted your ' + pd.n + ' to 100%!');
+        this.smashForge();
+      });
+      on(c, '#freeFix', () => {
+        if (cond >= 100 && S.coins >= 15) {
+          toast('🐢 Torty: "Your paddle is already at 100%! Come back anytime it drops to 25% or if you run low on coins."');
+          return;
+        }
+        S.padCond = 100;
+        if (S.coins < 15) S.coins = Math.max(S.coins, 15);
+        S.stats.repairs = (S.stats.repairs || 0) + 1;
+        this.ensureSmashStarterGear();
+        persist(); sfx('win');
+        toast('🐢🐭 Tortuga & Ratita Emergency Rebuild complete! Paddle 100% + 15🪙 stipend ready!');
+        this.smashForge();
+      });
+      on(c, '#toHub', () => this.smashHub());
+      on(c, '#toShop', () => this.shop('paddle', 'maxgrit_smash'));
+      on(c, '#b', () => this.back());
+    }, 'shopP');
+  }
+
   // ---------------- quick match on any court ----------------
   oppDef(diff, k = 0) { return { n: NAMES[(Math.random() * NAMES.length + k) % NAMES.length | 0], diff, look: rndLook(), hat: pick(['none', 'visor', 'cap', 'headband']), style: {} }; }
   partnerDef(id) { const p = PARTNERS.find((q) => q.id === id) || PARTNERS[0]; return Object.assign({}, p); }
-  matchSetup(court) { this.open(); const C = COURTS[court], s = this.setup; const quiet = C.kind === 'quiet', inDillers = C.bld === 'dillers';
+  matchSetup(court) { this.open(); const C = COURTS[court], s = this.setup; const quiet = C.kind === 'quiet', inDillers = C.bld === 'dillers', isSmashCourt = C.kind === 'smash';
     if (inDillers) this.ensureDillersStarterBalls();
+    if (isSmashCourt) { this.ensureSmashStarterGear(); s.smashMode = true; if (s.to < 11) s.to = 15; }
+    const smOn = smashOwned() && !!s.smashMode;
     const eqBall = BALLS.find((b) => b.id === S.eq.ball) || BALLS[0];
     const bChoices = inDillers ? BALLS.filter((b) => S.own.ball.includes(b.id) || ['silent', 'indoor', 'outdoor'].includes(b.id)) : [];
-    panel(`<h2>🏓 ${esc(C.n)}</h2><p class="sub">${quiet ? '🤫 Silent Serve foam balls only on this court. Shh!' : inDillers ? '🏟️ Drive Dillers Indoor Court · 👩‍⚖️🐶 Lola & Candy Rule: Indoor 26-Hole or Silent Serve Foam balls ONLY!' : C.kind === 'night' ? '🌙 Under the light towers' : C.kind === 'stadium' ? '🏟️ The big one. Pi-rat is the umpire.' : 'Open play: grab a game!'}</p>
+    const selSmasher = (S.smash && S.smash.smasher) || 'rita';
+    panel(`<h2>${isSmashCourt ? '💥 ' : '🏓 '}${esc(C.n)}</h2><p class="sub">${quiet ? '🤫 Silent Serve foam balls only on this court. Shh!' : inDillers ? '🏟️ Drive Dillers Indoor Court · 👩‍⚖️🐶 Lola & Candy Rule: Indoor 26-Hole or Silent Serve Foam balls ONLY!' : isSmashCourt ? '💥 Super Smash Arena! Smash winners = 2 pts, Super Smash winners = 3 pts!' : C.kind === 'night' ? '🌙 Under the light towers' : C.kind === 'stadium' ? '🏟️ The big one. Pi-rat is the umpire.' : 'Open play: grab a game!'}</p>
+      ${smashOwned() ? `<h3>RULES MODE</h3><div class="seg"><button data-smm="0" class="${!smOn ? 'on' : ''}">📏 Official Rules</button><button data-smm="1" class="${smOn ? 'on' : ''}">💥 Super Smash Mode (2pt/3pt + Supers!)</button></div>` : ''}
+      ${smOn ? `<h3>YOUR SMASHER</h3>${this.smasherPickerHtml(selSmasher)}` : ''}
       <h3>FORMAT</h3><div class="seg"><button data-f="0" class="${!s.doubles ? 'on' : ''}">🧍 Singles</button><button data-f="1" class="${s.doubles ? 'on' : ''}">👥 Doubles</button></div>
       ${s.doubles ? `<h3>YOUR PARTNER</h3><div class="hats">${PARTNERS.map((p) => `<button class="hat ${s.partner === p.id ? 'on' : ''}" data-p="${p.id}">${p.pet ? (p.id === 'luna' ? '🐭 ' : '🐁 ') : '🧑 '}${esc(p.n)}<small>${p.diff}</small></button>`).join('')}</div>` : ''}
       <h3>OPPONENTS</h3><div class="seg">${DIFFS.map(([k, n]) => `<button data-d="${k}" class="${s.diff === k ? 'on' : ''}">${n}</button>`).join('')}</div>
-      <h3>PLAY TO</h3><div class="seg"><button data-t="7" class="${s.to === 7 ? 'on' : ''}">⚡ 7</button><button data-t="11" class="${s.to !== 7 ? 'on' : ''}">🏆 11 (official)</button></div>
-      ${inDillers ? `<h3>BALL (INDOOR & SILENT SERVE ONLY!)</h3><div class="hats">${bChoices.map((b) => `<button class="hat ${S.eq.ball === b.id ? 'on' : ''}" data-mb="${b.id}">${b.id === 'silent' ? '🧽 ' : b.indoor ? '🟠 ' : '⚠️ '}${esc(b.n)}</button>`).join('')}</div>
+      <h3>PLAY TO</h3><div class="seg"><button data-t="7" class="${s.to === 7 ? 'on' : ''}">⚡ 7</button><button data-t="11" class="${s.to === 11 ? 'on' : ''}">🏆 11</button>${smOn ? `<button data-t="15" class="${s.to === 15 ? 'on' : ''}">💥 15 (Smash)</button>` : ''}</div>
+      ${inDillers ? `<h3>BALL (INDOOR & SILENT SERVE ONLY!)</h3><div class="hats">${bChoices.map((b) => `<button class="hat ${S.eq.ball === b.id ? 'on' : ''}" data-mb="${b.id}">${b.id === 'silent' || b.id === 'silent_smash' ? '🧽 ' : b.indoor ? '🟠 ' : '⚠️ '}${esc(b.n)}</button>`).join('')}</div>
       <p class="sub">${eqBall.indoor ? '✅ Approved by Courts Manager Lola & Candy!' : '⚠️ Outdoor ball selected — Candy will bark & steal it and Lola will kick you out!'}</p>` : ''}
-      <p class="sub">Win: 🪙 ${{ easy: 20, medium: 30, hard: 45, pro: 60 }[s.diff]} · rating up</p>
-      <div class="btnRow"><button class="go" id="go">▶ PLAY</button>${inDillers ? '<button class="mbtn2" id="ddT">🏟️ INDOOR TOURNEY</button>' : ''}<button class="mbtn2" id="b">NOT NOW</button></div>`, (c) => {
+      <p class="sub">Win: 🪙 ${{ easy: 20, medium: 30, hard: 45, pro: 60 }[s.diff] + (smOn ? 10 : 0)} · rating up</p>
+      <div class="btnRow"><button class="go" id="go">${smOn ? '💥 SMASH!' : '▶ PLAY'}</button>${inDillers ? '<button class="mbtn2" id="ddT">🏟️ INDOOR TOURNEY</button>' : ''}${isSmashCourt ? '<button class="mbtn2" id="smT">🏆 SMASH CUP</button>' : ''}<button class="mbtn2" id="b">NOT NOW</button></div>`, (c) => {
+      c.querySelectorAll('[data-smm]').forEach((b) => b.onclick = () => { sfx('click'); s.smashMode = b.dataset.smm === '1'; if (s.smashMode && s.to < 11) s.to = 15; this.matchSetup(court); });
+      c.querySelectorAll('[data-sm]').forEach((b) => b.onclick = () => { sfx('click'); if (!S.smash) S.smash = { wins: 0, run: null, smasher: 'rita', oppSmasher: 'bo', doubles: false }; S.smash.smasher = b.dataset.sm; persist(); this.matchSetup(court); });
       c.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { sfx('click'); s.doubles = b.dataset.f === '1'; this.matchSetup(court); });
       c.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => { sfx('click'); s.partner = S.partner = b.dataset.p; persist(); this.matchSetup(court); });
       c.querySelectorAll('[data-d]').forEach((b) => b.onclick = () => { sfx('click'); s.diff = b.dataset.d; this.matchSetup(court); });
       c.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { sfx('click'); s.to = +b.dataset.t; this.matchSetup(court); });
       c.querySelectorAll('[data-mb]').forEach((b) => b.onclick = () => { sfx('click'); S.eq.ball = b.dataset.mb; persist(); this.matchSetup(court); });
       on(c, '#ddT', () => this.dillersTourney());
-      on(c, '#go', () => { const opps = [this.oppDef(s.diff)]; if (s.doubles) opps.push(this.oppDef(s.diff, 3)); this.start({ court, mode: 'quick', doubles: s.doubles, partner: s.doubles ? this.partnerDef(s.partner) : null, opps, to: s.to, diff: s.diff, diffK: DIFFS.findIndex((d) => d[0] === s.diff), ball: S.eq.ball }); });
+      on(c, '#smT', () => this.smashHub());
+      on(c, '#go', () => {
+        const others = SMASHERS.filter((x) => x.id !== selSmasher);
+        const oppSm = others[(Math.random() * others.length) | 0] || SMASHERS[1];
+        const opps = [smOn ? { n: oppSm.n, diff: s.diff, look: rndLook(), hat: 'visor', style: { smash: 2.2, drive: 1.3, lob: 0.8, dink: 0.7 } } : this.oppDef(s.diff)];
+        if (s.doubles) opps.push(this.oppDef(s.diff, 3));
+        this.start({ court, mode: 'quick', smashMode: smOn, smasher: selSmasher, oppSmasher: oppSm.id, doubles: s.doubles, partner: s.doubles ? this.partnerDef(s.partner) : null, opps, to: s.to, diff: s.diff, diffK: DIFFS.findIndex((d) => d[0] === s.diff), ball: S.eq.ball, ump: isSmashCourt });
+      });
       on(c, '#b', () => this.back()); }); }
   start(cfg) { closePanel(); this.app.busy = false; this.app.paused = false; this.g.startMatch(cfg); }
   // ---------------- Park Ladder ----------------
@@ -271,9 +469,11 @@ export class UI {
   // ---------------- tournaments ----------------
   tourneys() { this.open(); if (S.tourRun) return this.bracket();
     const dillCard = dillersOwned() ? `<div class="shopIt star"><span class="ic big">🏟️</span><div class="si"><b>Drive Dillers Indoor Cup</b><small>Progressive 3-Court Indoor Tourney · Easy → Hard → Pro</small><p>Director Snowie's indoor championship! Travel across Dill Court 1, Silent Serve Court 2 & Center Stage.</p></div><button class="buy ${S.dillers && S.dillers.wins ? 'own' : ''}" id="goDillCup">${S.dillers && S.dillers.wins ? '🏆 Again' : '🪙 260'}</button></div>` : '';
-    panel(`<h2>🏆 TOURNAMENTS</h2><p class="sub">Early rounds to 7, the final to 11. Win them all for the trophy!</p><div class="shopList">${dillCard}${TOURNEYS.map((t) => { const lock = S.rating < t.need - 1e-6; return `<div class="shopIt ${lock ? 'lock' : ''}"><span class="ic big">${t.icon}</span><div class="si"><b>${esc(t.n)}</b><small>${t.fmt} · ${t.size} players · ${esc(COURTS[t.court].n)}</small><p>${esc(t.d)}</p></div>
+    const smashCard = smashOwned() ? `<div class="shopIt star"><span class="ic big">💥</span><div class="si"><b>Super Smash Cup</b><small>3-Arena Smash Tourney · Lava Island → Moon Base → Candy Stadium</small><p>Smash winners = 2 pts, Super Smashes = 3 pts! Battle Bolt Bo, Frosty Fran & Rocket Rita & Pi-rat for the Smash Crown.</p></div><button class="buy ${S.smash && S.smash.wins ? 'own' : ''}" id="goSmashCup">${S.smash && S.smash.wins ? '🏆 Again' : '🪙 300'}</button></div>` : '';
+    panel(`<h2>🏆 TOURNAMENTS</h2><p class="sub">Early rounds to 7, the final to 11. Win them all for the trophy!</p><div class="shopList">${smashCard}${dillCard}${TOURNEYS.map((t) => { const lock = S.rating < t.need - 1e-6; return `<div class="shopIt ${lock ? 'lock' : ''}"><span class="ic big">${t.icon}</span><div class="si"><b>${esc(t.n)}</b><small>${t.fmt} · ${t.size} players · ${esc(COURTS[t.court].n)}</small><p>${esc(t.d)}</p></div>
       <button class="buy ${S.tour[t.id] ? 'own' : ''}" data-t="${t.id}" ${lock ? 'disabled' : ''}>${lock ? '🔒 ' + t.need.toFixed(1) : S.tour[t.id] ? '🏆 Again' : '🪙 ' + t.prize}</button></div>`; }).join('')}</div><button class="mbtn2" id="b">BACK</button>`, (c) => {
       on(c, '#goDillCup', () => this.dillersTourney());
+      on(c, '#goSmashCup', () => this.smashHub());
       c.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { if (b.disabled) return; const t = TOURNEYS.find((x) => x.id === b.dataset.t); const rounds = Math.log2(t.size); const opps = []; for (let i = 0; i < rounds; i++) { const d = t.diffs[Math.min(i, t.diffs.length - 1)]; opps.push([this.oppDef(d, i), this.oppDef(d, i + 5)]); }
         S.tourRun = { id: t.id, round: 0, rounds, opps }; persist(); sfx('click'); this.bracket(); }); on(c, '#b', () => this.back()); }); }
   bracket() { this.open(); const r = S.tourRun, t = TOURNEYS.find((x) => x.id === r.id); const names = ['Final', 'Semifinal', 'Quarterfinal']; const rn = (i) => names[r.rounds - 1 - i];
@@ -294,7 +494,7 @@ export class UI {
       <div class="btnRow"><button class="go" id="a">🔁 AGAIN</button><button class="mbtn2" id="o">🎯 Other drill</button><button class="mbtn2" id="b">🚶 Done</button></div>`, (c) => {
       const end = () => this.g.endMatch(); on(c, '#a', () => { end(); this.startDrill(r.drill.id, r.cfg.court); }); on(c, '#o', () => { end(); this.drills(r.cfg.court); }); on(c, '#b', () => { end(); app.resume(); }); }); }
   // ---------------- results + career ----------------
-  matchOver(res) { const app = this.app; app.busy = true; app.paused = true; const cfg = res.cfg, st = S.stats; let coins = 0, dr = 0, title = res.win ? '🏆 YOU WIN!' : '😅 GOOD GAME!', extra = '', next = null, dillNext = null;
+  matchOver(res) { const app = this.app; app.busy = true; app.paused = true; const cfg = res.cfg, st = S.stats; let coins = 0, dr = 0, title = res.win ? '🏆 YOU WIN!' : '😅 GOOD GAME!', extra = '', next = null, dillNext = null, smashNext = null;
     st.matches++; if (res.win) st.wins++; else st.losses++; st.longest = Math.max(st.longest || 0, res.stats.longest); S.seenMatch = true; if (res.win) S.badges.firstwin = 1; if (res.stats.spins >= 5) S.badges.spin = 1;
     const K = [0.04, 0.06, 0.09, 0.12][cfg.diffK || 0];
     if (cfg.mode === 'quick') { coins = res.win ? { easy: 20, medium: 30, hard: 45, pro: 60 }[cfg.diff] || 20 : 6; dr = res.win ? K : -0.02; }
@@ -322,14 +522,40 @@ export class UI {
         extra = '🐁 Director Snowie: "So close! You can retry this round anytime at the bracket board!"';
       }
     }
+    else if (cfg.mode === 'smash_cup') {
+      if (!S.smash) S.smash = { wins: 0, run: null, smasher: 'rita', oppSmasher: 'bo', doubles: false };
+      const rIdx = cfg.smashRound || 0;
+      if (res.win) {
+        if (rIdx < SMASH_CUP_ROUNDS.length - 1) {
+          const nxt = SMASH_CUP_ROUNDS[rIdx + 1];
+          S.smash.run = { round: rIdx + 1 };
+          coins = 45 + rIdx * 30; dr = 0.09; smashNext = rIdx + 1;
+          if (this.g.mv) this.g.mv.exitSpot = SPOTS['court_' + nxt.court] || this.g.mv.exitSpot;
+          title = `💥 SMASH ROUND ${rIdx + 1} WON!`;
+          extra = `🐭 Smash Coach Luna: "BOOM!! Next arena: ${esc(COURTS[nxt.court].n)} (${nxt.diff.toUpperCase()})!"`;
+        } else {
+          S.smash.wins = (S.smash.wins || 0) + 1; S.smash.run = null;
+          S.badges.smashchamp = 1; S.tour.smash = (S.tour.smash || 0) + 1;
+          coins = 300; dr = 0.25;
+          title = '💥👑 SUPER SMASH CUP CHAMPION!';
+          extra = '🐭🏴‍☠️🐢 Luna, Umpire Pi-rat, Snowie, Candy & Torty crown you the SUPER SMASH GRAND CHAMPION!';
+        }
+      } else {
+        coins = 15; dr = -0.01;
+        extra = '🐭 Luna & 🐢 Torty: "Tough battle! Check your Paddle Grit at Torty\'s Forge and retry this round anytime!"';
+      }
+    }
     if (res.buffed) extra += ' 🌭 Snack power used.';
+    if (S.padCond != null && S.padCond <= 30) extra += ` 🛠️ Paddle Grit at ${Math.round(S.padCond)}% — visit Torty's Repair Forge for a FREE Emergency Rebuild!`;
     const before = rankOf(S.rating).n; S.rating = Math.max(2.0, Math.min(5.5, +(S.rating + dr).toFixed(2))); const after = rankOf(S.rating).n; S.coins += coins; S.xp += res.stats.hits; persist();
     const sh = res.stats.shots, shots = Object.keys(sh).map((k) => k + ' ' + sh[k]).join(' · ');
     panel(`<h2>${title}</h2><div class="big">${res.score[0]} – ${res.score[1]}</div>${extra ? `<p class="sub">${extra}</p>` : ''}
       <div class="statGrid"><div><b>+${coins}</b><small>🪙 Coins</small></div><div><b>${S.rating.toFixed(2)}</b><small>⭐ Rating ${dr >= 0 ? '+' : ''}${dr.toFixed(2)}</small></div><div><b>${res.stats.longest}</b><small>🏓 Longest rally</small></div><div><b>${res.stats.spins}</b><small>🌀 Spin shots</small></div></div>
       <p class="sub">${shots || ''}${before !== after ? '<br>🎉 New rank: <b>' + after + '</b>!' : ''}</p>
-      <div class="btnRow">${dillNext != null ? `<button class="go" id="dn">🏟️ NEXT COURT: ${esc(COURTS[DILLERS_ROUNDS[dillNext].court].n)}</button>` : cfg.mode === 'dillers' && !res.win ? '<button class="go" id="dr">🔁 RETRY ROUND</button>' : next ? '<button class="go" id="n">▶ NEXT ROUND</button>' : cfg.mode === 'quick' ? '<button class="go" id="r">🔁 REMATCH</button>' : cfg.mode === 'ladder' && S.ladder >= 1 && res.win ? '<button class="go" id="l">🪜 NEXT RUNG</button>' : ''}<button class="mbtn2" id="b">🚶 Back to the park</button></div>`, (c) => {
+      <div class="btnRow">${smashNext != null ? `<button class="go" id="sn">💥 NEXT ARENA: ${esc(COURTS[SMASH_CUP_ROUNDS[smashNext].court].n)}</button>` : cfg.mode === 'smash_cup' && !res.win ? '<button class="go" id="sr">🔁 RETRY SMASH ROUND</button>' : dillNext != null ? `<button class="go" id="dn">🏟️ NEXT COURT: ${esc(COURTS[DILLERS_ROUNDS[dillNext].court].n)}</button>` : cfg.mode === 'dillers' && !res.win ? '<button class="go" id="dr">🔁 RETRY ROUND</button>' : next ? '<button class="go" id="n">▶ NEXT ROUND</button>' : cfg.mode === 'quick' ? '<button class="go" id="r">🔁 REMATCH</button>' : cfg.mode === 'ladder' && S.ladder >= 1 && res.win ? '<button class="go" id="l">🪜 NEXT RUNG</button>' : ''}<button class="mbtn2" id="b">🚶 Back to the park</button></div>`, (c) => {
       const end = () => this.g.endMatch();
+      on(c, '#sn', () => { end(); this.smashHub(); });
+      on(c, '#sr', () => { end(); this.smashHub(); });
       on(c, '#dn', () => { end(); this.dillersTourney(); });
       on(c, '#dr', () => { end(); this.dillersTourney(); });
       on(c, '#n', () => { end(); this.bracket(); });

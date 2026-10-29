@@ -15,6 +15,9 @@ export const PAL = {
   dillGreen: { court: 0x10b981, kit: 0x059669, out: 0x1e293b },
   dillTeal: { court: 0x06b6d4, kit: 0x0891b2, out: 0x1e3a5f },
   dillChamp: { court: 0x4f46e5, kit: 0x16a34a, out: 0x111827 },
+  smashLava: { court: 0x991b1b, kit: 0xea580c, out: 0x1c1917 },
+  smashMoon: { court: 0x1e293b, kit: 0x0284c7, out: 0x334155 },
+  smashCandy: { court: 0xdb2777, kit: 0x06b6d4, out: 0xfde047 },
 };
 const LINE = 0xffffff;
 // one full court centred at (cx,cz): net along x, baselines at cz +/- 6.7

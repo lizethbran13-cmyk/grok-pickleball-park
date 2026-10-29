@@ -7,7 +7,7 @@ import { makePet, animPet } from './pets.js?v=ppk2';
 import { MB, toGroup } from './models.js?v=ppk2';
 import { P } from './geo.js?v=ppk2';
 import { S, persist } from './save.js?v=ppk2';
-import { PADDLES, BALLS, COURTS, DRILLS } from './data.js?v=ppk2';
+import { PADDLES, BALLS, COURTS, DRILLS, SMASHERS } from './data.js?v=ppk2';
 import { BUILDINGS } from './bld.js?v=ppk2';
 import { SPOTS, ENV, NIGHT } from './map.js?v=ppk2';
 import { sfx, playMusic } from './audio.js?v=ppk2';
@@ -59,14 +59,20 @@ export class MatchView {
     this.defs = list.map((d, i) => Object.assign({ pad: PADDLES[(i * 3 + 1) % PADDLES.length] }, d));
     this.defs.forEach((d) => { if (d.pet) this.game.petBusy(d.pet, true); });
     const assist = S.opts.assist !== false;
-    const players = this.defs.map((d, i) => ({ ctrl: i === 0 ? 'human' : 'ai', name: d.n, diff: d.diff || 'medium', style: d.style, assist: i === 0 ? assist : true, pad: { pow: d.pad.pow, ctl: d.pad.ctl, spin: d.pad.spin } }));
+    this.smashMode = !!(cfg.smashMode || this.C.kind === 'smash');
+    this.mySmasher = SMASHERS.find((s) => s.id === (cfg.smasher || (S.smash && S.smash.smasher) || 'rita')) || SMASHERS[0];
+    this.oppSmasher = SMASHERS.find((s) => s.id === (cfg.oppSmasher || (S.smash && S.smash.oppSmasher) || 'bo')) || SMASHERS[2];
+    this.superCharge = [0, 0]; this.superArmed = false; this.superActive = null;
+    const cond0 = Math.max(0, Math.min(100, S.padCond == null ? 100 : S.padCond));
+    const gritK = cond0 <= 30 ? 0.82 : 1.0;
+    const players = this.defs.map((d, i) => ({ ctrl: i === 0 ? 'human' : 'ai', name: d.n, diff: d.diff || 'medium', style: d.style, assist: i === 0 ? assist : true, pad: { pow: d.pad.pow * (i === 0 ? gritK : 1), ctl: d.pad.ctl, spin: d.pad.spin * (i === 0 ? gritK : 1) } }));
     this.m = new PB.Match({ doubles: !!cfg.doubles, to: cfg.to || 11, players, drag: ball.drag, bounce: ball.bounce, practice: !!this.drill, slowAI: assist && (cfg.diffK || 0) < 1, autoServeAfter: this.drill ? 0 : 12, seed: (Math.random() * 1e6) | 0, hooks: { ev: (e) => this.onEv(e), bounce: (m, ev, f) => this.onBounce(ev, f), fault: (m, f) => this.onFault(f) } });
     const mp = this.m.players[0]; mp.ai.reach = 1 + ((S.eq.shoe === 'swift') ? 0.06 : 0); if (S.buff === 'pop') { this.buffed = true; S.buff = null; persist(); }
     this.figs = this.defs.map((d, i) => this.mkFig(d, i));
     this.mkBall(); this.mkMarks(); this.mkOverlay();
     if (this.cid === 'center') this.mkBoard();
     if (this.night) setEnvironment(NIGHT);
-    if (this.drill) this.startDrill(); else { this.say(cfg.title || (cfg.doubles ? 'Doubles' : 'Singles') + ' to ' + (cfg.to || 11), 'Side-out scoring \u2022 win by 2'); }
+    if (this.drill) this.startDrill(); else { this.say(cfg.title || (cfg.doubles ? 'Doubles' : 'Singles') + ' to ' + (cfg.to || 11), this.smashMode ? '💥 Super Smash Mode: Smash = 2 pts • Super Smash = 3 pts!' : 'Side-out scoring \u2022 win by 2'); }
     playMusic(this.night ? 'night' : this.drill ? 'garage' : 'arcade');
     this.camPos = new THREE.Vector3(); this.camLook = new THREE.Vector3(); this.snap = true; this.lastScore = '0-0';
     this.stats = { hits: 0, spins: 0, shots: {}, longest: 0 };
@@ -102,14 +108,23 @@ export class MatchView {
   // ---------------- overlay + touch ----------------
   mkOverlay() { const o = document.createElement('div'); o.id = 'mt'; const dr = !!this.drill;
     o.innerHTML = `<div class="mzone" id="mZone"></div><div class="mtop"><button class="mb" data-a="pause">\u23F8</button><div class="mscore" id="mScore"></div><button class="mb" data-a="view">\uD83D\uDC41\uFE0F</button></div>
+      <div id="smHud" class="${this.smashMode ? '' : 'hidden'}">
+        <div class="smBar t0" id="smB0"><span class="ic">${this.mySmasher.icon}</span><div class="tr"><i id="smF0" style="background:${this.mySmasher.col}"></i></div><span class="ct" id="smC0">0%</span></div>
+        <div class="smGrit" id="smGrit">🏓 ${Math.round(S.padCond ?? 100)}%</div>
+        <div class="smBar t1" id="smB1"><span class="ic">${this.oppSmasher.icon}</span><div class="tr"><i id="smF1" style="background:${this.oppSmasher.col}"></i></div><span class="ct" id="smC1">0%</span></div>
+      </div>
       <div class="mcall" id="mCall"></div><div class="mhint" id="mHint"></div><div class="mump" id="mUmp"></div>
       <div class="mring" id="mRing"></div><div class="mknob" id="mKnob"></div>
       <div class="mshots">${[['dink', '\uD83E\uDEB6', 'DINK'], ['drop', '\uD83C\uDFAF', 'DROP'], ['drive', '\u26A1', 'DRIVE'], ['lob', '\uD83C\uDF19', 'LOB'], ['smash', '\uD83D\uDCA5', 'SMASH']].map(([k, i, n]) => `<button class="ms" data-s="${k}"><i>${i}</i><b>${n}</b></button>`).join('')}<button class="ms spin" data-s="spin"><i>\uD83C\uDF00</i><b>SPIN</b></button></div>
-      <div class="mtip" id="mTip">${dr ? '' : 'Swipe or tap the right side to hit \u2022 left thumb to move'}</div>`;
+      <button class="ms super ${this.smashMode ? '' : 'hidden'}" id="bSuper"><span id="bSupF"></span><i>${this.mySmasher.icon}</i><b>SUPER</b></button>
+      <div class="mtip" id="mTip">${dr ? '' : this.smashMode ? '💥 Smash winners = 2 pts • Fill Super Bar to 100% & tap SUPER (or Space/6) for 3 pts!' : 'Swipe or tap the right side to hit \u2022 left thumb to move'}</div>`;
     document.body.appendChild(o); this.ov = o; this.spin = false; this.armed = null;
     o.querySelectorAll('[data-a]').forEach((b) => b.onclick = (e) => { e.stopPropagation(); sfx('click'); if (b.dataset.a === 'pause') this.game.app.ui.pause(true); else this.toggleFP(); });
     o.querySelectorAll('[data-s]').forEach((b) => { const f = (e) => { e.preventDefault(); e.stopPropagation(); const k = b.dataset.s; if (k === 'spin') { this.spin = !this.spin; b.classList.toggle('on', this.spin); sfx('click'); return; }
         this.armed = k; o.querySelectorAll('[data-s]').forEach((x) => x.classList.toggle('arm', x.dataset.s === k && k !== 'spin')); this.swing(k, 0, 0.6); }; b.addEventListener('pointerdown', f); });
+    const bSup = o.querySelector('#bSuper');
+    if (bSup) bSup.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.armSuper(); });
+    this.updSmashHud();
     const z = o.querySelector('#mZone'), ring = o.querySelector('#mRing'), knob = o.querySelector('#mKnob'); this.stick = { id: null, x: 0, y: 0 }; const sw = {};
     z.addEventListener('pointerdown', (e) => { e.preventDefault(); const left = e.clientX < innerWidth * 0.42;
       if (left && this.stick.id === null) { const s = this.stick; s.id = e.pointerId; s.x0 = e.clientX; s.y0 = e.clientY; s.x = s.y = 0; ring.style.left = knob.style.left = e.clientX + 'px'; ring.style.top = knob.style.top = e.clientY + 'px'; ring.classList.add('on'); knob.classList.add('on'); }
@@ -118,8 +133,51 @@ export class MatchView {
     const up = (e) => { const s = this.stick; if (e.pointerId === s.id) { s.id = null; s.x = s.y = 0; ring.classList.remove('on'); knob.classList.remove('on'); return; } const q = sw[e.pointerId]; if (!q) return; delete sw[e.pointerId];
       const dx = e.clientX - q.x, dy = e.clientY - q.y, L = Math.hypot(dx, dy), dt = performance.now() - q.t; this.gesture(dx, dy, L, dt); };
     z.addEventListener('pointerup', up); z.addEventListener('pointercancel', up);
-    this.keyD = (e) => { if (this.game.app.busy) return; const k = e.code; const sh = { Digit1: 'dink', Digit2: 'drop', Digit3: 'drive', Digit4: 'lob', Digit5: 'smash' }; if (sh[k]) { this.armed = sh[k]; this.swing(sh[k], 0, 0.6); } else if (k === 'Space' || k === 'KeyE' || k === 'Enter') { this.swing(this.armed || 'auto', 0, 0.6); e.preventDefault(); } else if (k === 'KeyQ' || k === 'KeyJ') { this.spin = !this.spin; o.querySelector('.spin').classList.toggle('on', this.spin); } else if (k === 'KeyV') this.toggleFP(); };
+    this.keyD = (e) => { if (this.game.app.busy) return; const k = e.code; const sh = { Digit1: 'dink', Digit2: 'drop', Digit3: 'drive', Digit4: 'lob', Digit5: 'smash' }; if (sh[k]) { this.armed = sh[k]; this.swing(sh[k], 0, 0.6); } else if (k === 'Space' || k === 'KeyE' || k === 'Enter') { this.swing(this.armed || 'auto', 0, 0.6); e.preventDefault(); } else if (k === 'KeyQ' || k === 'KeyJ') { this.spin = !this.spin; o.querySelector('.spin').classList.toggle('on', this.spin); } else if (k === 'Digit6' || k === 'KeyR' || k === 'KeyF') this.armSuper(); else if (k === 'KeyV') this.toggleFP(); };
     window.addEventListener('keydown', this.keyD); const tz = $('touch'); if (tz) tz.style.display = 'none'; const hud = $('hud'); if (hud) hud.classList.add('inmatch'); }
+  armSuper() {
+    if (!this.smashMode || this.done) return;
+    if (this.superCharge[0] < 100) {
+      sfx('click');
+      this.hint('⚡ Charge Super Bar to 100% by rallying & hitting smashes! (' + Math.round(this.superCharge[0]) + '%)');
+      return;
+    }
+    this.superArmed = !this.superArmed;
+    sfx(this.superArmed ? 'win' : 'click');
+    if (this.superArmed) {
+      this.armed = 'smash';
+      this.pop(this.mySmasher.superName + ' ARMED!');
+      this.swing('smash', 0, 0.95);
+    }
+    this.updSmashHud();
+  }
+  updSmashHud() {
+    if (!this.ov) return;
+    const gEl = this.ov.querySelector('#smGrit');
+    if (gEl) {
+      const cond = Math.max(0, Math.min(100, Math.round(S.padCond ?? 100)));
+      gEl.textContent = '🏓 ' + cond + '%';
+      gEl.style.borderColor = cond <= 25 ? '#ef4444' : cond <= 55 ? '#facc15' : '#fde047';
+    }
+    if (!this.smashMode) return;
+    [0, 1].forEach((t) => {
+      const pct = Math.max(0, Math.min(100, Math.round(this.superCharge[t] || 0)));
+      const bar = this.ov.querySelector('#smB' + t), fill = this.ov.querySelector('#smF' + t), ct = this.ov.querySelector('#smC' + t);
+      if (fill) fill.style.width = pct + '%';
+      if (ct) ct.textContent = pct >= 100 ? 'MAX' : pct + '%';
+      if (bar) {
+        bar.classList.toggle('full', pct >= 100);
+        if (t === 0) bar.classList.toggle('armed', !!this.superArmed);
+      }
+    });
+    const bSup = this.ov.querySelector('#bSuper'), bSupF = this.ov.querySelector('#bSupF');
+    if (bSup && bSupF) {
+      const pct = Math.max(0, Math.min(100, Math.round(this.superCharge[0] || 0)));
+      bSupF.style.height = pct + '%';
+      bSup.classList.toggle('ready', pct >= 100);
+      bSup.classList.toggle('armed', !!this.superArmed);
+    }
+  }
   gesture(dx, dy, L, dt) { const me = this.m.players[0]; let type, pow, ax = clamp(dx / 140, -1.3, 1.3);
     if (L < 18) { this.swing(this.armed || 'auto', 0, 0.55); return; }
     const near = Math.abs(me.z) < D.K + 1.4;
@@ -152,16 +210,64 @@ export class MatchView {
   onFault(f) { if (this.drill) { const m = this.m; if (m.phase === 'rally' && !(m.rally.lastPlayer === 0 && this.lastBounce && this.lastBounce.z < 0)) this.drillScore(false, 1, /net/i.test(f.why) ? 'Into the net' : /Kitchen/.test(f.why) ? '\uD83D\uDEAB Kitchen fault!' : /bounce/.test(f.why) ? 'Let it bounce first!' : 'Missed it'); } return false; }
   // ---------------- match events ----------------
   onEv(e) { const m = this.m; if (!m || !this.ov) return; const quiet = this.ballDef.quiet;
-    if (e.t === 'hit') { sfx(quiet ? 'foam' : 'pock'); if (e.p === 0) { this.stats.hits++; this.stats.shots[e.type] = (this.stats.shots[e.type] || 0) + 1; if (e.spin) { this.stats.spins++; this.pop('\uD83C\uDF00 ' + (e.type === 'dink' || e.type === 'drop' ? 'Slice!' : 'Topspin!')); } this.armed = null; this.ov.querySelectorAll('[data-s]').forEach((x) => x.classList.remove('arm')); if (e.perfect) this.pop('\u2B50 Perfect timing!'); } }
+    if (e.t === 'hit') {
+      sfx(quiet ? 'foam' : 'pock');
+      const hp = m.players[e.p], hTeam = hp ? hp.team : 0;
+      if (e.p === 0) {
+        this.stats.hits++;
+        this.stats.shots[e.type] = (this.stats.shots[e.type] || 0) + 1;
+        if (e.type === 'smash') S.stats.smashes = (S.stats.smashes || 0) + 1;
+        const wear = e.type === 'smash' ? (this.superArmed ? 1.8 : 0.9) : e.type === 'drive' ? 0.35 : 0.15;
+        S.padCond = Math.max(0, +((S.padCond == null ? 100 : S.padCond) - wear).toFixed(1));
+        if (e.spin) { this.stats.spins++; this.pop('\uD83C\uDF00 ' + (e.type === 'dink' || e.type === 'drop' ? 'Slice!' : 'Topspin!')); }
+        this.armed = null; this.ov.querySelectorAll('[data-s]').forEach((x) => x.classList.remove('arm'));
+        if (e.perfect) this.pop('\u2B50 Perfect timing!');
+      }
+      if (this.smashMode && !this.drill) {
+        const gain = (e.type === 'smash' ? 34 : e.type === 'drive' ? 22 : 16) * (hTeam === 0 && this.pad && this.pad.id === 'rocket' ? 1.2 : 1);
+        if (hTeam === 0 && this.superArmed && this.superCharge[0] >= 100) {
+          this.superCharge[0] = 0; this.superArmed = false;
+          this.superActive = { team: 0, sm: this.mySmasher };
+          S.stats.superSmashes = (S.stats.superSmashes || 0) + 1;
+          m.ball.vx *= 1.28; m.ball.vz *= 1.28;
+          this.pop('⚡ ' + this.mySmasher.superName + '!!');
+          sfx('win');
+        } else if (hTeam === 1 && this.superCharge[1] >= 100 && (e.type === 'smash' || e.type === 'drive')) {
+          this.superCharge[1] = 0;
+          this.superActive = { team: 1, sm: this.oppSmasher };
+          m.ball.vx *= 1.18; m.ball.vz *= 1.18;
+          this.pop('⚠️ ' + this.oppSmasher.superName + '!');
+        } else {
+          this.superCharge[hTeam] = Math.min(100, (this.superCharge[hTeam] || 0) + gain);
+          if (e.type === 'smash' && (!this.superActive || this.superActive.team !== hTeam)) this.pop('💥 SMASH SHOT!');
+        }
+        this.updSmashHud();
+      } else {
+        this.updSmashHud();
+      }
+    }
     else if (e.t === 'bounce') sfx(quiet ? 'foamb' : 'bnc');
     else if (e.t === 'net') sfx('net');
     else if (e.t === 'hint') { if (e.p === 0) this.hint(e.text, e.kitchen); }
-    else if (e.t === 'callout' && !this.drill) { this.updScore(); const meServe = m.players[m.game.server] && m.players[m.game.server].team === 0; this.hint(meServe && m.game.server === 0 ? '\uD83C\uDFBE Your serve! Tap or swipe up \u2014 underhand, diagonal' : meServe ? 'Your partner serves' : 'Get ready to return \u2014 let the serve bounce!'); if (this.cid === 'center' || this.cfg.ump) this.ump(e.text); else this.call(e.text, 900); this.drawBoard(); }
+    else if (e.t === 'callout' && !this.drill) { this.superActive = null; this.updScore(); const meServe = m.players[m.game.server] && m.players[m.game.server].team === 0; this.hint(meServe && m.game.server === 0 ? '\uD83C\uDFBE Your serve! Tap or swipe up \u2014 underhand, diagonal' : meServe ? 'Your partner serves' : 'Get ready to return \u2014 let the serve bounce!'); if (this.cid === 'center' || this.cfg.ump) this.ump(e.text); else this.call(e.text, 900); this.drawBoard(); }
     else if (e.t === 'point' && !e.practice) { const res = e.res, mine = e.w === 0; this.stats.longest = Math.max(this.stats.longest, e.hits || 0);
+      let bonusPts = 0, smashTag = '';
+      if (this.smashMode && res.point) {
+        const isSuper = this.superActive && this.superActive.team === e.w;
+        const isSmash = e.lastShot === 'smash' && e.winnerShot;
+        if (isSuper) { bonusPts = 2; smashTag = ' ⚡ SUPER SMASH +3 PTS!'; }
+        else if (isSmash) { bonusPts = 1; smashTag = ' 💥 SMASH WINNER +2 PTS!'; }
+        if (bonusPts > 0) {
+          m.game.score[e.w] += bonusPts;
+          const sc = m.game.score, to = m.game.to;
+          if (sc[e.w] >= to && sc[e.w] - sc[1 - e.w] >= 2) { m.game.over = true; m.game.winner = e.w; res.over = true; }
+        }
+      }
+      this.superActive = null;
       let t = e.why || ''; if (/^Winner|^Ace/.test(t)) t = mine ? (t.startsWith('Ace') ? '\uD83D\uDE80 ACE!' : '\uD83C\uDFC6 Winner!') : (t.startsWith('Ace') ? 'Aced!' : 'Got past you!');
-      this.call(t + (res.sideout ? '  \u2022  Side out!' : res.secondServer ? '  \u2022  Second server' : res.point ? (mine ? '  \u2022  Point!' : '') : ''), 1500, !mine);
-      sfx(mine ? (res.point ? 'point' : 'click') : 'miss'); if (mine) this.cheerT = e.great ? 3 : 1.4; if (e.great) this.pop('\uD83D\uDD25 What a rally! ' + e.hits + ' shots');
-      this.updScore(); this.drawBoard(); }
+      this.call(t + (smashTag || (res.sideout ? '  \u2022  Side out!' : res.secondServer ? '  \u2022  Second server' : res.point ? (mine ? '  \u2022  Point!' : '') : '')), 1500, !mine);
+      sfx(mine ? (res.point ? 'point' : 'click') : 'miss'); if (mine) this.cheerT = e.great || bonusPts > 0 ? 3 : 1.4; if (smashTag) this.pop(smashTag); else if (e.great) this.pop('\uD83D\uDD25 What a rally! ' + e.hits + ' shots');
+      this.updScore(); this.updSmashHud(); this.drawBoard(); }
     else if (e.t === 'over') this.finish(e.winner); }
   updScore() { const g = this.m.game, el = $('mScore'); if (!el) return; const nm = (t) => this.defs.filter((d, i) => this.m.players[i].team === t).map((d) => d.n.split(' ').slice(-1)[0]).join(' & ');
     el.innerHTML = `<span class="t0 ${g.st === 0 ? 'srv' : ''}">${nm(0)} <b>${g.score[0]}</b></span><span class="t1 ${g.st === 1 ? 'srv' : ''}"><b>${g.score[1]}</b> ${nm(1)}</span><em>${R.callout(g)}${g.doubles ? '' : ''} \u2022 to ${g.to}</em>`; }
@@ -198,7 +304,7 @@ export class MatchView {
       else if (f.pet) { const pt = f.pet; pt.x = pt.y = pt.z = 0; pt.yaw = 0; pt.speed = (p.spd || 0) * 0.6; animPet(pt, dt, null); f.piv.rotation.x = sw < 1 ? lerp(0.9, -1.6, ease(sw)) : -0.2 + Math.sin(this.T * 3) * 0.05; if (p.celebT > 0) pt.root.position.y = Math.abs(Math.sin(this.T * 9)) * 0.2; } });
     // ball, shadow, trail, landing ring
     const vis = b.live || m.phase === 'serve' || m.phase === 'pre'; this.ball.visible = vis; this.shadow.visible = vis;
-    this.ball.position.set(C.x + b.x, Y0 + b.y, C.z + b.z); this.ball.rotation.x += (b.s || 0) * dt * 6 + dt * 3;
+    this.ball.position.set(C.x + b.x, Y0 + b.y, C.z + b.z); this.ball.rotation.x += (b.s || 0) * dt * 6 + dt * 3; this.ball.scale.setScalar(this.superActive && this.superActive.sm && this.superActive.sm.superKind === 'giant' ? 2.4 : this.superActive ? 1.35 : 1);
     const hy = Math.max(0, b.y); this.shadow.position.set(C.x + b.x, Y0 + 0.01, C.z + b.z); this.shadow.scale.setScalar(1 + hy * 0.35); this.shadow.material.opacity = clamp(0.42 - hy * 0.06, 0.08, 0.42);
     const sp = Math.hypot(b.vx, b.vy, b.vz); if (b.live && sp > 3) this.hist.unshift([this.ball.position.x, this.ball.position.y, this.ball.position.z]); else this.hist.length = 0; if (this.hist.length > 7) this.hist.length = 7;
     const _m = new THREE.Matrix4(); this.hist.forEach((h, k) => { const s = 1 - k / 8; _m.makeScale(s, s, s).setPosition(h[0], h[1], h[2]); this.trail.setMatrixAt(k, _m); }); this.trail.count = this.hist.length; this.trail.instanceMatrix.needsUpdate = true;
