@@ -21,7 +21,7 @@ import { compact } from './compact.js?v=ppk2';
 import { COURTS, PADDLES, BALLS } from './data.js?v=ppk2';
 import { LINES, goal } from './story.js?v=ppk2';
 import { MatchView } from './match3d.js?v=ppk2';
-import { dillersOwned, smashOwned } from './dlc.js?v=ppk2';
+import { dillersOwned, smashOwned, tourOwned } from './dlc.js?v=ppk2';
 const PI = Math.PI, PB = window.PB;
 const _r = new THREE.Ray(), _v = new THREE.Vector3(), _b = new THREE.Box3(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _e = new THREE.Euler();
 // shared instanced paddle + ball geometry for the ambient players
@@ -56,7 +56,7 @@ export class Game {
     this.marge = this.people.find((p) => p.name === 'Marge'); }
   // ---------------- ambient matches: real AI-vs-AI pickleball on the courts (cheap instanced people) ----------------
   buildAmbient() { this.amb = []; const look = (s) => this.crowd.look(s, false);
-    AMBIENT.forEach(([id, dbl], k) => { const C = COURTS[id]; if (!C || (C.dlc && !dillersOwned()) || (C.smashDlc && !smashOwned())) return; const n = dbl ? 4 : 2; const ps = []; for (let i = 0; i < n; i++) ps.push({ ctrl: 'ai', diff: ['easy', 'medium', 'hard', 'medium'][(i + k) % 4] });
+    AMBIENT.forEach(([id, dbl], k) => { const C = COURTS[id]; if (!C || (C.dlc && !dillersOwned()) || (C.smashDlc && !smashOwned()) || (C.tourDlc && !tourOwned())) return; const n = dbl ? 4 : 2; const ps = []; for (let i = 0; i < n; i++) ps.push({ ctrl: 'ai', diff: ['easy', 'medium', 'hard', 'medium'][(i + k) % 4] });
       const reg = C.bld ? 'in_' + C.bld : 'out';
       const m = new PB.Match({ doubles: dbl, seed: 77 + k, players: ps }); const figs = m.players.map((p, i) => ({ x: C.x, z: C.z, y: 0.07, ry: 0, look: look(7000 + k * 10 + i), region: reg, sp: 0, wt: i, pick: 0, ambP: p }));
       this.amb.push({ id, C, m, figs, dbl, k, hidden: false, region: reg }); });
@@ -107,6 +107,10 @@ export class Game {
       this.tortyDill = this.npc('torty', { at: SP.tortyDillers, y: 0.08, yaw: PI / 2, s: 1.12, label: '🐢 Torty (Drive Diller Pro Gear)', region: 'in_dillers', talk: () => this.talkTortyDill() });
       this.piratDill = this.npc('pirat', { at: SP.piratDillers, y: 1.92, yaw: PI / 2, s: 1.22, label: '🏴‍☠️ Umpire Pi-rat (Center Stage)', region: 'in_dillers', talk: () => talk(LINES.piratDill) });
     }
+    if (tourOwned() && SP.tortyTour) {
+      this.tortyTour = this.npc('torty', { at: SP.tortyTour, y: 1.1, yaw: 0, s: 1.15, label: '🐢 Torty (TTN Anchor)', region: 'out', talk: () => this.app.ui.tourHub() });
+      this.candyTour = this.npc('candy', { at: SP.candyTour, y: 0.08, yaw: 0, s: 1.1, label: '🐶 Candy (Tour Mascot)', region: 'out', talk: () => { sfx('bark'); toast('🐶 Candy wags at the TTN camera! Woof!'); } });
+    }
     // Super Smash Arena cameos (all 5 family pets: Luna, Snowie, Torty, Candy, Pi-rat!)
     if (smashOwned() && SP.lunaSmash) {
       this.lunaSmash = this.npc('luna', { at: SP.lunaSmash, y: 1.14, yaw: -PI / 2, s: 1.28, label: '🐭 Luna (Chief Smash Engineer)', region: 'out', talk: () => this.talkLunaSmash() });
@@ -129,7 +133,7 @@ export class Game {
       this.piratSmash = this.npc('pirat', { at: SP.piratSmash, y: 1.92, yaw: PI / 2, s: 1.25, label: '🏴‍☠️ Umpire Pi-rat (Candy Stadium)', region: 'out', talk: () => talk(LINES.piratSmash) });
     }
   }
-  petBusy(id, busy) { for (const k of [id, id + 'Dill', id + 'Smash']) { const p = this[k]; if (p) { p.busy = busy; p.root.visible = !busy; } } }
+  petBusy(id, busy) { for (const k of [id, id + 'Dill', id + 'Smash', id + 'Tour']) { const p = this[k]; if (p) { p.busy = busy; p.root.visible = !busy; } } }
   talkTorty() { const first = !S.talks.torty; S.talks.torty = 1; persist(); talk(first ? LINES.torty0 : LINES.torty, null, [{ t: '🛠️ Re-Grit & Paddle Repair (' + Math.round(S.padCond ?? 100) + '%)', f: () => this.app.ui.smashForge() }, { t: '🏓 Shop paddles', f: () => this.app.ui.shop('paddle') }, { t: '🟡 Shop balls', f: () => this.app.ui.shop('ball') }, { t: '🧢 Gear', f: () => this.app.ui.shop('gear') }, { t: 'Just looking!', f: () => {} }]); }
   talkLuna() { const first = !S.talks.luna; S.talks.luna = 1; persist(); talk(first ? LINES.luna0 : LINES.luna, null, [{ t: '🎯 Pick a drill', f: () => this.app.ui.drills('train') }, { t: '💥 Super Smash Hub', f: () => this.app.ui.smashHub() }, { t: 'Later, Coach!', f: () => {} }]); }
   talkSnowie() { talk(LINES.snowie, null, [{ t: '🌭 Order a snack', f: () => this.app.ui.snacks() }, { t: 'Just saying hi!', f: () => {} }]); }
@@ -194,6 +198,7 @@ export class Game {
     for (const id in COURTS) {
       if (COURTS[id].dlc && !dillersOwned()) continue;
       if (COURTS[id].smashDlc && !smashOwned()) continue;
+      if (COURTS[id].tourDlc && !tourOwned()) continue;
       const s = SP['court_' + id] || (id === 'center' ? SP.stadium : null);
       if (s) push(s, 2.6, (COURTS[id].kind === 'smash' ? '💥 Smash on ' : '🏓 Play on ') + COURTS[id].n, () => ui.matchSetup(id));
     }
@@ -226,6 +231,13 @@ export class Game {
     } else if (SP.smashGate) {
       push(SP.smashGate, 3.0, '🔒 Super Smash DLC (75 🎟️ in Arcade)', () => toast('💥 Unlock Super Smash Expansion (75 tickets) in the Grok Arcade DLC Machine!'));
     }
+    if (tourOwned() && SP.tourDesk) {
+      push(SP.tourDesk, 2.6, '📺 TTN World Tour Desk (Torty)', () => ui.tourHub());
+      push(SP.tourBoard, 2.6, '✈️ World Tour Departures', () => ui.tourHub());
+      push(SP.tourGear, 2.5, '🏓 Franklin Tour Gear (MaxGrit + Silent Serve)', () => ui.shop('paddle', 'maxgrit_tour'));
+    } else if (SP.tourGate) {
+      push(SP.tourGate, 3.0, '🔒 World Tour DLC (Arcade DLC Shop)', () => toast('🌍 Unlock the World Tour Expansion in the Grok Arcade DLC Shop!'));
+    }
     if (this.marge) this.acts.push({ x: this.marge.x, z: this.marge.z + 2.4, r: 0.1, label: '', f: () => {} }); }
   buyPop() { if (S.coins < 3) { toast('🪙 Pickle Pops cost 3 coins'); sfx('deny'); return; } S.coins -= 3; S.snacks = (S.snacks || 0) + 1; S.buff = 'pop'; persist(); sfx('buy'); toast('🍭 Pickle Pop! +10% hustle next match'); }
   // ---------------- visibility, fades ----------------
@@ -236,7 +248,7 @@ export class Game {
     for (const B of BUILDINGS) { const inIt = B === b || B === mvB; (RM['roof_' + B.id] || []).forEach((m) => m.visible = !inIt || this.fp);
       const d = Math.max(0, B.x0 - me.x, me.x - B.x1, B.z0 - me.z, me.z - B.z1); const show = inIt || (d < 26 && !this.fp) || (this.fp && d < 6); (RM['in_' + B.id] || []).forEach((m) => m.visible = show); }
     for (const p of this.npcs) p.root.visible = !p.busy && (!p.region || p.region === 'out' || (RM[p.region] && RM[p.region][0] ? RM[p.region][0].visible : true)); }
-  areaName() { const me = this.me; if (me.x < -54 && me.z > 22 && me.z < 80) return '💥 Super Smash Arena'; if (me.x > 34 && me.z > 24 && me.z < 76) return '🏟️ Drive Dillers Avenue'; if (me.z > 100) return '🎟️ Park Entrance'; if (me.z > 42) return '⛲ Pickle Fountain Plaza'; if (me.z > 14 && Math.abs(me.x) < 30) return '🏟️ Stadium Walk'; if (me.z > -12) return me.x < -30 ? '🏓 West Courts' : me.x > 30 ? '🏓 East Courts' : '🏟️ Stadium Court'; if (me.x < -40) return '🤫 Quiet Practice Court'; if (me.x > 40) return '🌙 Night Lights Court'; return '🌳 North Lawn'; }
+  areaName() { const me = this.me; if (me.z < -64 && Math.abs(me.x) < 100) { if (me.z < -74) { const c = me.x < -48 ? '🇫🇷 Paris' : me.x < 0 ? '🇯🇵 Tokyo' : me.x < 48 ? '🇺🇸 New York' : '🇧🇷 Rio'; return c + ' · World Tour'; } return '🌍 World Tour Boulevard'; } if (me.x < -54 && me.z > 22 && me.z < 80) return '💥 Super Smash Arena'; if (me.x > 34 && me.z > 24 && me.z < 76) return '🏟️ Drive Dillers Avenue'; if (me.z > 100) return '🎟️ Park Entrance'; if (me.z > 42) return '⛲ Pickle Fountain Plaza'; if (me.z > 14 && Math.abs(me.x) < 30) return '🏟️ Stadium Walk'; if (me.z > -12) return me.x < -30 ? '🏓 West Courts' : me.x > 30 ? '🏓 East Courts' : '🏟️ Stadium Court'; if (me.x < -40) return '🤫 Quiet Practice Court'; if (me.x > 40) return '🌙 Night Lights Court'; return '🌳 North Lawn'; }
   musicFor(b) { if (this.mv) return; playMusic(b ? (b.id === 'snack' ? 'kitchen' : b.id === 'shop' ? 'toyroom' : b.id === 'train' || b.id === 'dillers' ? 'garage' : 'living') : 'garden'); }
   fades() { const b = this.inB, c = E.camera.position, me = this.me; _v.set(me.x, me.y + 1.2, me.z).sub(c); const L = _v.length(); _r.set(c, _v.normalize());
     for (const B of BUILDINGS) for (const f of B.fades) { let hide = false; if (B === b && !this.fp && !this.mv) { _b.copy(f.box).expandByScalar(0.05); const p = _r.intersectBox(_b, _s); hide = !!p && c.distanceTo(p) < L - 0.3; } if (hide) { f._h = true; f.meshes.forEach((m) => m.visible = false); } else if (f._h) { f._h = false; f.meshes.forEach((m) => m.visible = true); } } }
@@ -255,9 +267,10 @@ export class Game {
       }
     }
     const A = this.amb.find((a) => a.id === cfg.court); if (A) { A.hidden = true; A.figs.forEach((f) => f.vis = false); } this.hiddenAmb = A;
+    if (C && C.kind === 'tour') { const o = document.createElement('div'); o.id = 'ttnBug'; o.style.cssText = 'position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:40;pointer-events:none;background:rgba(15,118,110,.92);color:#fff;font:900 12px system-ui;padding:5px 9px;border-radius:8px;border:2px solid #fde047;max-width:60vw'; o.innerHTML = '<span style="color:#ef4444">●</span> TTN LIVE · ' + C.icon + ' ' + C.n + '<br><small style="font-weight:700;color:#fde68a">Tortuga TV Network · World Tour</small>'; document.body.appendChild(o); }
     this.mv = new MatchView(this, cfg); this.me.setVisible(false); this.setVis(true); this.app.hud.region((C.kind === 'smash' || cfg.smashMode ? '💥 ' : '🏓 ') + COURTS[cfg.court].n);
   }
-  endMatch() { const mv = this.mv; if (!mv) return; mv.dispose(); this.mv = null; if (this.hiddenAmb) { this.hiddenAmb.hidden = false; this.hiddenAmb = null; } this.me.setVisible(!this.fp); const s = mv.exitSpot; if (s) { this.me.place([s[0], 0.1, s[1]], 0); this.cam.yaw = PI; } this.cam.snap = true; E.camera.fov = E.baseFov; E.camera.updateProjectionMatrix(); this.setVis(true); this.musicFor(this.inB); }
+  endMatch() { const mv = this.mv; if (!mv) return; { const o = document.getElementById('ttnBug'); if (o) o.remove(); } mv.dispose(); this.mv = null; if (this.hiddenAmb) { this.hiddenAmb.hidden = false; this.hiddenAmb = null; } this.me.setVisible(!this.fp); const s = mv.exitSpot; if (s) { this.me.place([s[0], 0.1, s[1]], 0); this.cam.yaw = PI; } this.cam.snap = true; E.camera.fov = E.baseFov; E.camera.updateProjectionMatrix(); this.setVis(true); this.musicFor(this.inB); }
   // ---------------- per-frame ----------------
   update(dt) { this.T += dt; const app = this.app;
     if (this.mv) { this.mv.update(dt); this.common(dt, this.mv.focus()); return; }

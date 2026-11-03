@@ -218,7 +218,7 @@ export class MatchView {
         this.stats.shots[e.type] = (this.stats.shots[e.type] || 0) + 1;
         if (e.type === 'smash') S.stats.smashes = (S.stats.smashes || 0) + 1;
         const wear = e.type === 'smash' ? (this.superArmed ? 1.8 : 0.9) : e.type === 'drive' ? 0.35 : 0.15;
-        S.padCond = Math.max(0, +((S.padCond == null ? 100 : S.padCond) - wear).toFixed(1));
+        S.padCond = Math.max(0, +((S.padCond == null ? 100 : S.padCond) - wear * (this.ballDef && this.ballDef.tour ? 0.5 : 1)).toFixed(1));
         if (e.spin) { this.stats.spins++; this.pop('\uD83C\uDF00 ' + (e.type === 'dink' || e.type === 'drop' ? 'Slice!' : 'Topspin!')); }
         this.armed = null; this.ov.querySelectorAll('[data-s]').forEach((x) => x.classList.remove('arm'));
         if (e.perfect) this.pop('\u2B50 Perfect timing!');

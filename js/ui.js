@@ -5,9 +5,9 @@ import { sfx, setSound } from './audio.js?v=ppk2';
 import { panel, closePanel, on, toast } from './uikit.js?v=ppk2';
 import { SKINS, HAIRS, HAIR_COLS, SHIRTS, PANTS, cleanLook } from './humans.js?v=ppk2';
 import { goal } from './story.js?v=ppk2';
-import { PADDLES, BALLS, HATS, SHOES, RANKS, rankOf, LADDER, NAMES, TOURNEYS, DILLERS_ROUNDS, SMASHERS, SMASH_CUP_ROUNDS, DRILLS, COURTS, PARTNERS } from './data.js?v=ppk2';
+import { PADDLES, BALLS, HATS, SHOES, RANKS, rankOf, LADDER, NAMES, TOURNEYS, DILLERS_ROUNDS, SMASHERS, SMASH_CUP_ROUNDS, DRILLS, COURTS, PARTNERS, WT_LEGS, WT_FEE } from './data.js?v=ppk2';
 import { SPOTS } from './map.js?v=ppk2';
-import { dillersOwned, smashOwned } from './dlc.js?v=ppk2';
+import { dillersOwned, smashOwned, tourOwned } from './dlc.js?v=ppk2';
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const R = () => Math.random(), pick = (a) => a[(R() * a.length) | 0];
 const rndLook = () => ({ skin: (R() * 6) | 0, hair: (R() * 6) | 0, hairC: (R() * 6) | 0, shirt: (R() * 8) | 0, pants: (R() * 6) | 0 });
@@ -76,7 +76,7 @@ export class UI {
     panel(`<h2>🗺️ PARK MAP</h2><p class="sub">Tap to fast-travel.</p><div class="hats">${P.map((p, i) => `<button class="hat" data-i="${i}">${p[0]}</button>`).join('')}</div><button class="mbtn2" id="b">CLOSE</button>`, (c) => {
       c.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { sfx('whoosh'); const p = P[+b.dataset.i]; this.g.tp(p[1], p[2], p[3]); this.back(); }); on(c, '#b', () => this.back()); }); }
   // ---------------- Torty's Pro Shop ----------------
-  shop(cat = 'paddle', focus) { this.open(); const lists = { paddle: PADDLES, ball: BALLS, gear: [...HATS.filter((h) => h.id !== 'none').map((h) => Object.assign({ cat: 'hat' }, h)), ...SHOES.filter((s) => s.id !== 'court').map((s) => Object.assign({ cat: 'shoe' }, s))] };
+  shop(cat = 'paddle', focus) { this.open(); const lists = { paddle: PADDLES.filter((x) => !x.tour || tourOwned()), ball: BALLS.filter((x) => !x.tour || tourOwned()), gear: [...HATS.filter((h) => h.id !== 'none').map((h) => Object.assign({ cat: 'hat' }, h)), ...SHOES.filter((s) => s.id !== 'court').map((s) => Object.assign({ cat: 'shoe' }, s))] };
     const item = (x) => { const c = x.cat || cat, own = S.own[c].includes(x.id), eq = S.eq[c] === x.id;
       const vis = cat === 'paddle' ? `<span class="pdl" style="--a:${hex(x.a)};--b:${hex(x.b)}">${x.face === 'grit' ? '<em></em>' : ''}</span>` : cat === 'ball' ? `<span class="bal" style="--a:${hex(x.col)}">${x.quiet ? '' : '<em></em>'}</span>` : `<span class="ic">${c === 'hat' ? '🧢' : '👟'}</span>`;
       const stats = cat === 'paddle' ? `<div class="stats"><small>POWER</small>${bar(x.pow, '#f97316')}<small>CONTROL</small>${bar(x.ctl, '#38bdf8')}<small>SPIN</small>${bar(x.spin, '#a855f7')}</div>` : cat === 'ball' ? `<div class="stats"><small>SPEED</small>${bar(1 - (x.drag - 0.04) * 10, '#f97316')}<small>BOUNCE</small>${bar((x.bounce - 0.5) * 3.5, '#38bdf8')}<small>${x.quiet ? '🤫 SILENT FOAM (INDOOR OK)' : x.indoor ? '🏟️ INDOOR 26-HOLE' : x.legal ? '☀️ OUTDOOR ONLY' : ''}</small></div>` : '';
@@ -350,6 +350,37 @@ export class UI {
       ump: true,
     });
   }
+
+  // ---------------- World Tour Expansion (TTN) ----------------
+  tourHub() {
+    this.open(); if (!S.wt) S.wt = { leg: 0, titles: 0, standby: 0 }; const wt = S.wt; const leg = Math.min(3, wt.leg || 0), L = WT_LEGS[leg];
+    const cond = Math.round(S.padCond == null ? 100 : S.padCond), broke = S.coins < WT_FEE;
+    panel(`<h2>🌍 PICKLEBALL WORLD TOUR</h2>
+      <p class="sub">🐢 <b>TTN Anchor Torty:</b> "Every match is LIVE on the Tortuga TV Network! Each flight costs <b>${WT_FEE} 🪙</b>. Lose and the ticket is gone and your paddle takes travel wear, but you never get stuck: if you're short on coins, Tortuga Air gives you a <b>free standby seat</b>." · World Tour titles: <b>🏆 ${wt.titles || 0}</b></p>
+      <div class="ladder">${WT_LEGS.map((r, i) => `<div class="lr ${i < leg ? 'beat' : i === leg ? 'next' : ''}"><span class="rk">${r.flag} LEG ${i + 1}</span><b>${esc(r.city)} — vs ${esc(r.opp.n)}</b><small>${r.diff.toUpperCase()} · to ${r.to} · win ${r.pay} 🪙 · ${i < leg ? 'WON ✔' : i === leg ? 'NEXT FLIGHT' : 'LOCKED'}</small></div>`).join('')}</div>
+      <p class="sub">🏓 Paddle grit: <b>${cond}%</b> ${cond <= 30 ? '⚠️ worn, visit Torty\'s Forge (free rebuild when broke)' : ''}</p>
+      <div class="btnRow">
+        <button class="go" id="wtGo">✈️ FLY TO ${esc(L.city.toUpperCase())} (${broke ? 'FREE STANDBY' : WT_FEE + ' 🪙'})</button>
+        <button class="mbtn2 sm" id="wtGear">🏓 Franklin Tour Gear</button>
+        <button class="mbtn2 sm" id="wtForge">🛠️ Repair Forge</button>
+        ${leg > 0 ? '<button class="mbtn2 sm danger" id="wtRst">↺ Restart Tour</button>' : ''}
+        <button class="mbtn2 sm" id="b">CLOSE</button>
+      </div>`, (c) => {
+      on(c, '#wtGo', () => this.startTourLeg(leg));
+      on(c, '#wtGear', () => this.shop('paddle', 'maxgrit_tour'));
+      on(c, '#wtForge', () => this.smashForge());
+      on(c, '#wtRst', () => { wt.leg = 0; persist(); toast('↺ World Tour restarted in Paris'); this.tourHub(); });
+      on(c, '#b', () => this.back());
+    }, 'shopP');
+  }
+  startTourLeg(i) {
+    if (!S.wt) S.wt = { leg: 0, titles: 0, standby: 0 }; const L = WT_LEGS[i] || WT_LEGS[0];
+    if (S.coins >= WT_FEE) { S.coins -= WT_FEE; toast('✈️ Tortuga Air ticket to ' + L.city + ': -' + WT_FEE + ' 🪙'); }
+    else { S.wt.standby = (S.wt.standby || 0) + 1; toast('🐢✈️ Free standby seat to ' + L.city + '! (Tortuga Air never leaves a player behind)'); }
+    persist(); sfx('buy');
+    const opps = [Object.assign({ style: { dink: 1.1, drive: 1.3, lob: 0.8, smash: 1.4 } }, L.opp)];
+    this.start({ court: L.court, mode: 'world_tour', tourLeg: i, doubles: false, opps, to: L.to, diff: L.diff, diffK: DIFFS.findIndex((d) => d[0] === L.diff), ball: S.eq.ball, title: '📺 TTN LIVE · ' + L.flag + ' World Tour Leg ' + (i + 1) + ': ' + L.city, ump: i === 3 });
+  }
   smashForge() {
     this.open(); this.ensureSmashStarterGear();
     const cond = Math.round(S.padCond == null ? 100 : S.padCond);
@@ -494,7 +525,7 @@ export class UI {
       <div class="btnRow"><button class="go" id="a">🔁 AGAIN</button><button class="mbtn2" id="o">🎯 Other drill</button><button class="mbtn2" id="b">🚶 Done</button></div>`, (c) => {
       const end = () => this.g.endMatch(); on(c, '#a', () => { end(); this.startDrill(r.drill.id, r.cfg.court); }); on(c, '#o', () => { end(); this.drills(r.cfg.court); }); on(c, '#b', () => { end(); app.resume(); }); }); }
   // ---------------- results + career ----------------
-  matchOver(res) { const app = this.app; app.busy = true; app.paused = true; const cfg = res.cfg, st = S.stats; let coins = 0, dr = 0, title = res.win ? '🏆 YOU WIN!' : '😅 GOOD GAME!', extra = '', next = null, dillNext = null, smashNext = null;
+  matchOver(res) { const app = this.app; app.busy = true; app.paused = true; const cfg = res.cfg, st = S.stats; let tourNext = false, tourRetry = false, coins = 0, dr = 0, title = res.win ? '🏆 YOU WIN!' : '😅 GOOD GAME!', extra = '', next = null, dillNext = null, smashNext = null;
     st.matches++; if (res.win) st.wins++; else st.losses++; st.longest = Math.max(st.longest || 0, res.stats.longest); S.seenMatch = true; if (res.win) S.badges.firstwin = 1; if (res.stats.spins >= 5) S.badges.spin = 1;
     const K = [0.04, 0.06, 0.09, 0.12][cfg.diffK || 0];
     if (cfg.mode === 'quick') { coins = res.win ? { easy: 20, medium: 30, hard: 45, pro: 60 }[cfg.diff] || 20 : 6; dr = res.win ? K : -0.02; }
@@ -545,6 +576,14 @@ export class UI {
         extra = '🐭 Luna & 🐢 Torty: "Tough battle! Check your Paddle Grit at Torty\'s Forge and retry this round anytime!"';
       }
     }
+    else if (cfg.mode === 'world_tour') {
+      if (!S.wt) S.wt = { leg: 0, titles: 0, standby: 0 }; const i = cfg.tourLeg || 0, L = WT_LEGS[i];
+      if (res.win) { coins = L.pay; dr = 0.08 + i * 0.03;
+        if (i < WT_LEGS.length - 1) { S.wt.leg = i + 1; title = '📺 TTN: ' + L.flag + ' ' + L.city.toUpperCase() + ' WIN!'; extra = '🐢 Torty on TTN: "What a match in ' + esc(L.city) + '! Next flight: ' + WT_LEGS[i + 1].flag + ' ' + esc(WT_LEGS[i + 1].city) + '!"'; tourNext = true; }
+        else { S.wt.leg = 0; S.wt.titles = (S.wt.titles || 0) + 1; S.badges.worldtour = 1; title = '🌍👑 WORLD TOUR CHAMPION!'; extra = '📺 TTN breaking news: you won Paris, Tokyo, New York AND Rio! 🐢🐶🐭🐁🏴‍☠️ the whole crew is cheering!'; }
+      } else { coins = 0; dr = -0.02; S.padCond = Math.max(5, (S.padCond ?? 100) - 12);
+        extra = '📺 TTN: "Upset in ' + esc(L.city) + '!" Your ' + WT_FEE + ' 🪙 ticket is used up and travel wore your paddle grit (-12%). Retry this leg any time; if you\'re out of coins, the standby seat is free.'; tourRetry = true; }
+    }
     if (res.buffed) extra += ' 🌭 Snack power used.';
     if (S.padCond != null && S.padCond <= 30) extra += ` 🛠️ Paddle Grit at ${Math.round(S.padCond)}% — visit Torty's Repair Forge for a FREE Emergency Rebuild!`;
     const before = rankOf(S.rating).n; S.rating = Math.max(2.0, Math.min(5.5, +(S.rating + dr).toFixed(2))); const after = rankOf(S.rating).n; S.coins += coins; S.xp += res.stats.hits; persist();
@@ -552,8 +591,9 @@ export class UI {
     panel(`<h2>${title}</h2><div class="big">${res.score[0]} – ${res.score[1]}</div>${extra ? `<p class="sub">${extra}</p>` : ''}
       <div class="statGrid"><div><b>+${coins}</b><small>🪙 Coins</small></div><div><b>${S.rating.toFixed(2)}</b><small>⭐ Rating ${dr >= 0 ? '+' : ''}${dr.toFixed(2)}</small></div><div><b>${res.stats.longest}</b><small>🏓 Longest rally</small></div><div><b>${res.stats.spins}</b><small>🌀 Spin shots</small></div></div>
       <p class="sub">${shots || ''}${before !== after ? '<br>🎉 New rank: <b>' + after + '</b>!' : ''}</p>
-      <div class="btnRow">${smashNext != null ? `<button class="go" id="sn">💥 NEXT ARENA: ${esc(COURTS[SMASH_CUP_ROUNDS[smashNext].court].n)}</button>` : cfg.mode === 'smash_cup' && !res.win ? '<button class="go" id="sr">🔁 RETRY SMASH ROUND</button>' : dillNext != null ? `<button class="go" id="dn">🏟️ NEXT COURT: ${esc(COURTS[DILLERS_ROUNDS[dillNext].court].n)}</button>` : cfg.mode === 'dillers' && !res.win ? '<button class="go" id="dr">🔁 RETRY ROUND</button>' : next ? '<button class="go" id="n">▶ NEXT ROUND</button>' : cfg.mode === 'quick' ? '<button class="go" id="r">🔁 REMATCH</button>' : cfg.mode === 'ladder' && S.ladder >= 1 && res.win ? '<button class="go" id="l">🪜 NEXT RUNG</button>' : ''}<button class="mbtn2" id="b">🚶 Back to the park</button></div>`, (c) => {
+      <div class="btnRow">${tourNext ? '<button class="go" id="wn">✈️ NEXT FLIGHT</button>' : tourRetry ? '<button class="go" id="wn">🔁 RETRY LEG</button>' : ''}${smashNext != null ? `<button class="go" id="sn">💥 NEXT ARENA: ${esc(COURTS[SMASH_CUP_ROUNDS[smashNext].court].n)}</button>` : cfg.mode === 'smash_cup' && !res.win ? '<button class="go" id="sr">🔁 RETRY SMASH ROUND</button>' : dillNext != null ? `<button class="go" id="dn">🏟️ NEXT COURT: ${esc(COURTS[DILLERS_ROUNDS[dillNext].court].n)}</button>` : cfg.mode === 'dillers' && !res.win ? '<button class="go" id="dr">🔁 RETRY ROUND</button>' : next ? '<button class="go" id="n">▶ NEXT ROUND</button>' : cfg.mode === 'quick' ? '<button class="go" id="r">🔁 REMATCH</button>' : cfg.mode === 'ladder' && S.ladder >= 1 && res.win ? '<button class="go" id="l">🪜 NEXT RUNG</button>' : ''}<button class="mbtn2" id="b">🚶 Back to the park</button></div>`, (c) => {
       const end = () => this.g.endMatch();
+      on(c, '#wn', () => { end(); this.tourHub(); });
       on(c, '#sn', () => { end(); this.smashHub(); });
       on(c, '#sr', () => { end(); this.smashHub(); });
       on(c, '#dn', () => { end(); this.dillersTourney(); });

@@ -265,6 +265,10 @@ export const COURTS = {
   smash_lava: { n: 'Lava Island Smash Court', x: -72, z: 38, kind: 'smash', smashTheme: 'lava', smashDlc: true, icon: '🌋' },
   smash_moon: { n: 'Moon Base Smash Court', x: -90, z: 38, kind: 'smash', smashTheme: 'moon', smashDlc: true, icon: '🚀' },
   smash_candy: { n: 'Candy Stadium Smash Court', x: -81, z: 64, kind: 'smash', smashTheme: 'candy', smashDlc: true, icon: '🍭' },
+  wt_paris: { n: 'Paris Roland Court', x: -72, z: -86, kind: 'tour', tourDlc: true, icon: '🇫🇷' },
+  wt_tokyo: { n: 'Tokyo Sakura Court', x: -24, z: -86, kind: 'tour', tourDlc: true, icon: '🇯🇵' },
+  wt_nyc: { n: 'New York Skyline Court', x: 24, z: -86, kind: 'tour', tourDlc: true, icon: '🇺🇸' },
+  wt_rio: { n: 'Rio Copacabana Court', x: 72, z: -86, kind: 'tour', tourDlc: true, icon: '🇧🇷' },
 };
 export const PARTNERS = [
   { id: 'kai', n: 'Coach Kai', diff: 'hard', look: { skin: 2, hair: 0, hairC: 1, shirt: 2, pants: 1 }, hat: 'visor' },
@@ -272,3 +276,15 @@ export const PARTNERS = [
   { id: 'snowie', n: 'Snowie', diff: 'medium', pet: 'snowie' },
   { id: 'rita', n: 'Rally Rita', diff: 'medium', look: { skin: 3, hair: 1, hairC: 0, shirt: 1, pants: 0 }, hat: 'cap' },
 ];
+
+// World Tour Expansion: 4 legs, each airs on Tortuga TV Network (TTN). Travel fee per leg; lose = fee gone + grit wear.
+export const WT_FEE = 20;
+export const WT_LEGS = [
+  { court: 'wt_paris', city: 'Paris', flag: '🇫🇷', diff: 'medium', to: 11, pay: 70, opp: { id: 'wt_amelie', n: 'Amélie Ace', diff: 'medium', look: { skin: 0, hair: 1, hairC: 2, shirt: 1, pants: 2 }, hat: 'visor' }, opp2: { id: 'wt_luc', n: 'Lob Luc', diff: 'medium', look: { skin: 1, hair: 0, hairC: 0, shirt: 6, pants: 3 }, hat: 'cap' } },
+  { court: 'wt_tokyo', city: 'Tokyo', flag: '🇯🇵', diff: 'hard', to: 11, pay: 100, opp: { id: 'wt_haru', n: 'Haru Hands', diff: 'hard', look: { skin: 1, hair: 2, hairC: 0, shirt: 3, pants: 0 }, hat: 'headband' }, opp2: { id: 'wt_yuki', n: 'Yuki Volley', diff: 'hard', look: { skin: 1, hair: 5, hairC: 0, shirt: 7, pants: 5 }, hat: 'visor' } },
+  { court: 'wt_nyc', city: 'New York', flag: '🇺🇸', diff: 'hard', to: 11, pay: 130, opp: { id: 'wt_brooklyn', n: 'Brooklyn Banger', diff: 'hard', look: { skin: 3, hair: 4, hairC: 0, shirt: 5, pants: 3 }, hat: 'cap' }, opp2: { id: 'wt_taxi', n: 'Taxi Tina', diff: 'hard', look: { skin: 2, hair: 1, hairC: 4, shirt: 8, pants: 2 }, hat: 'headband' } },
+  { court: 'wt_rio', city: 'Rio', flag: '🇧🇷', diff: 'pro', to: 15, pay: 320, opp: { id: 'wt_samba', n: 'Samba Sofia', diff: 'pro', look: { skin: 3, hair: 5, hairC: 1, shirt: 2, pants: 5 }, hat: 'visor' }, opp2: { id: 'wt_rafa', n: 'Rafa Rally', diff: 'pro', look: { skin: 2, hair: 0, hairC: 0, shirt: 0, pants: 0 }, hat: 'pickle' } },
+];
+
+PADDLES.push({ id: 'maxgrit_tour', n: 'MaxGrit World Tour', by: 'Franklin × TTN', pow: 0.8, ctl: 0.9, spin: 0.97, price: 340, a: 0x1e3a8a, b: 0xfacc15, face: 'grit', star: true, tour: true, d: 'Franklin MaxGrit World Tour edition, the one the TTN cameras love! Gritty face, tour-tough edge guard.' });
+BALLS.push({ id: 'silent_tour', n: 'Silent Serve World Tour', price: 70, col: 0x60a5fa, drag: 0.06, bounce: 0.74, legal: true, quiet: true, indoor: true, tour: true, d: 'Franklin Silent Serve World Tour foam ball! Quiet, legal on every World Tour court, and gentle on your paddle grit (half wear).' });

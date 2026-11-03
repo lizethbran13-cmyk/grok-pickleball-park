@@ -7,6 +7,7 @@ import { rbox } from './world.js?v=ppk2';
 import { shell, part, onSide } from './bld.js?v=ppk2';
 import { buildDillers } from './dillers.js?v=ppk2';
 import { buildSmashComplex } from './smash.js?v=ppk2';
+import { buildWorldTour } from './worldtour.js?v=ppk2';
 import { txt, poster, frameArt, wallWord, clockW, pendant, planter, awning, trash } from './art.js?v=ppk2';
 import { court, PAL, CW, fence, fencedBox, bleachers, lightTower, umpireChair, scoreFrame, paddleProp, hopper, ballBucket } from './court.js?v=ppk2';
 import { COURTS } from './data.js?v=ppk2';
@@ -58,10 +59,10 @@ function register(w, x, z, ry) { const T = w.tf(x, 0, z, ry); T.box('g', 0x1f293
 export function buildMap(w) {
   propSeed(4848); const L = w.lights; w.region = 'out';
   // ground: lawn with gentle colour variation, hills ringing the park
-  { const N = 120, Sz = 420; const g = new THREE.PlaneGeometry(Sz, Sz, N, N); g.rotateX(-PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i) - 30, r = Math.max(Math.abs(x) * 0.95, Math.abs(z) * 0.9); const hill = r > 118 ? Math.pow((r - 118) / 70, 1.6) * 22 * (0.7 + 0.3 * Math.sin(x * 0.05) * Math.cos(z * 0.04)) : 0; p.setY(i, hill - 0.02); p.setZ(i, p.getZ(i) + 30); } g.computeVertexNormals();
+  { const N = 120, Sz = 420; const g = new THREE.PlaneGeometry(Sz, Sz, N, N); g.rotateX(-PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i) - 30, r = Math.max(Math.abs(x) * 0.95, Math.abs(z) * 0.9); const hill = r > 118 ? Math.pow((r - 118) / 70, 1.6) * 22 * (0.7 + 0.3 * Math.sin(x * 0.05) * Math.cos(z * 0.04)) : 0; const zf = z + 60, dq = Math.max(0, Math.abs(x) - 104, -112 - zf); p.setY(i, hill * Math.min(1, dq / 14) - 0.02); /* World Tour boulevard: keep north lawn flat to z -112 */ p.setZ(i, p.getZ(i) + 30); } g.computeVertexNormals();
     w.addFn('m', g, (c, x, y, z) => { const n = Math.sin(x * 0.19) * Math.cos(z * 0.15) * 0.5 + Math.sin(x * 0.04 + z * 0.06) * 0.5; c.setHSL(0.27 + n * 0.025, 0.52, 0.42 + n * 0.05 + Math.min(0.08, y * 0.004)); }, 0, 0, 0); w.solid(-210, -3, -180, 210, 0, 240, { floor: true }); }
   paths(w); plaza(w); entrance(w); stadium(w); complexes(w); nightCourt(w); quietCourt(w); northLawn(w);
-  clubhouse(w); proShop(w); snackBar(w); training(w); shopFill(w); clubFill(w); snackFill(w); trainFill(w); buildDillers(w, { SPOTS, SEATS, SITS, STANDS, RES }); buildSmashComplex(w, SPOTS, SEATS, SITS, STANDS); nature(w);
+  clubhouse(w); proShop(w); snackBar(w); training(w); shopFill(w); clubFill(w); snackFill(w); trainFill(w); buildDillers(w, { SPOTS, SEATS, SITS, STANDS, RES }); buildSmashComplex(w, SPOTS, SEATS, SITS, STANDS); buildWorldTour(w, SPOTS, SEATS, RES); nature(w);
   w.region = 'out';
 }
 function paths(w) { const T = (x0, z0, x1, z1, c1 = 0xe8dcc4, c2 = 0xdccfb4) => K.floor(w, x0, z0, x1, z1, 'tile', 0.02, c1, c2, 1.5);
@@ -310,7 +311,7 @@ function training(w) { const c = COURTS.train; const b = shell(w, { id: 'train',
 function nature(w) { w.region = 'out';
   const spots = []; for (let i = 0; i < 400 && spots.length < 120; i++) { const x = -112 + R() * 224, z = -86 + R() * 230; if (!free(x, z, 3)) continue; if (spots.some(([a, b]) => Math.hypot(a - x, b - z) < 7)) continue; spots.push([x, z]); }
   spots.forEach(([x, z], i) => { if (i % 3 === 2) { K.bush(w, x, z, 1 + (i % 3) * 0.2); K.bush(w, x + 1.4, z + 0.6, 0.8); } else K.tree(w, x, z, 1.1 + (i % 4) * 0.22, i % 6 === 0 ? 1 : 0); });
-  for (let i = 0; i < 60; i++) { const a = i / 60 * PI * 2, r = 120 + (i % 4) * 6; const x = Math.cos(a) * r, z = 30 + Math.sin(a) * r * 1.02; K.tree(w, x, z, 1.4 + (i % 3) * 0.3, i % 7 === 0 ? 1 : 0); }
+  for (let i = 0; i < 60; i++) { const a = i / 60 * PI * 2, r = 120 + (i % 4) * 6; const x = Math.cos(a) * r, z = 30 + Math.sin(a) * r * 1.02; if (!free(x, z, 4)) continue; K.tree(w, x, z, 1.4 + (i % 3) * 0.3, i % 7 === 0 ? 1 : 0); }
   [[-20, 40, -17, 43], [17, 40, 20, 43], [-20, 77, -17, 80], [17, 77, 20, 80], [-40, 96, -36, 100], [-14, 100, -9, 104], [9, 100, 14, 104]].forEach(([a, b, c, d]) => K.flowerBed(w, a, b, c, d));
   for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2 + 0.3; w.add('m', blobGeo(i * 3, 0.15, 2), 0xffffff, Math.cos(a) * 240, 70 + (i % 3) * 14, 30 + Math.sin(a) * 240, 0, a, 0, 26, 7, 14); }
 }

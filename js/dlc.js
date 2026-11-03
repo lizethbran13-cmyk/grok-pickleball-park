@@ -5,6 +5,9 @@ export const DLC_KEY = 'grokDLC.pickleballpark.drive_dillers_expansion';
 export const DLC_PRICE = 75;
 export const SMASH_DLC_KEY = 'grokDLC.pickleballpark.super_smash_expansion';
 export const SMASH_DLC_PRICE = 75;
+// 3. World Tour Expansion (Pickleball Park World Tour) -> grokDLC.pickleballpark.world_tour_expansion
+export const TOUR_DLC_KEY = 'grokDLC.pickleballpark.world_tour_expansion';
+export const TOUR_DLC_PRICE = 75;
 
 const QS = (() => { try { return new URLSearchParams(location.search); } catch (e) { return new URLSearchParams(''); } })();
 
@@ -26,4 +29,8 @@ export function dillersOwned() {
 
 export function smashOwned() {
   return checkKey(SMASH_DLC_KEY);
+}
+
+export function tourOwned() {
+  return checkKey(TOUR_DLC_KEY);
 }
